@@ -79,7 +79,9 @@ public class NamesrvStartup {
             return null;
         }
 
+        // nameserver业务参数
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
+        // nameserver网络参数
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
         if (commandLine.hasOption('c')) {
@@ -88,6 +90,7 @@ public class NamesrvStartup {
                 InputStream in = new BufferedInputStream(new FileInputStream(file));
                 properties = new Properties();
                 properties.load(in);
+                // 文件中配置，进行设置
                 MixAll.properties2Object(properties, namesrvConfig);
                 MixAll.properties2Object(properties, nettyServerConfig);
 
