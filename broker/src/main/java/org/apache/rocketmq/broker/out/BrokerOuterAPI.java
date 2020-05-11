@@ -175,6 +175,7 @@ public class BrokerOuterAPI {
         final String namesrvAddr,
         final boolean oneway,
         final int timeoutMills,
+        /*请求头比较重要*/
         final RegisterBrokerRequestHeader requestHeader,
         final byte[] body
     ) throws RemotingCommandException, MQBrokerException, RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException,

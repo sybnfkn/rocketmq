@@ -27,8 +27,10 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 public class RegisterBrokerRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private String brokerName;
+    // broker地址
     @CFNotNull
     private String brokerAddr;
+
     @CFNotNull
     private String clusterName;
     @CFNotNull
