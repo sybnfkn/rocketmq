@@ -56,6 +56,8 @@ public class MQFaultStrategy {
     }
 
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
+        // 故障转移机制
+        // 一种机制，如果broker宕机期间，如果一次消息发送失败，就会将broker暂时排除在消息队列选择范围内
         if (this.sendLatencyFaultEnable) {
             try {
                 int index = tpInfo.getSendWhichQueue().getAndIncrement();
@@ -86,6 +88,10 @@ public class MQFaultStrategy {
                 log.error("Error occurred when selecting message queue", e);
             }
 
+            // 默认机制
+            // 一定程度规避故障broker
+            // 但是如果broker宕机，如果上次选择宕机的第一个队列，那么随后选择宕机的第二个队列
+            // 可能还是会失败，引起重试
             return tpInfo.selectOneMessageQueue();
         }
 
