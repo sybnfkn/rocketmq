@@ -31,7 +31,9 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
+
         FaultItem old = this.faultItemTable.get(name);
+        // 新建
         if (null == old) {
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
@@ -39,10 +41,12 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
             old = this.faultItemTable.putIfAbsent(name, faultItem);
             if (old != null) {
+
                 old.setCurrentLatency(currentLatency);
                 old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
             }
         } else {
+            // 更新
             old.setCurrentLatency(currentLatency);
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
