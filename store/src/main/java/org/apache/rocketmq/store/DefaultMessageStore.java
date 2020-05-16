@@ -366,11 +366,13 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private PutMessageStatus checkMessage(MessageExtBrokerInner msg) {
+        // 消息队列长度大于256
         if (msg.getTopic().length() > Byte.MAX_VALUE) {
             log.warn("putMessage message topic length too long " + msg.getTopic().length());
             return PutMessageStatus.MESSAGE_ILLEGAL;
         }
 
+        // 消息属性长度大于65536
         if (msg.getPropertiesString() != null && msg.getPropertiesString().length() > Short.MAX_VALUE) {
             log.warn("putMessage message properties length too long " + msg.getPropertiesString().length());
             return PutMessageStatus.MESSAGE_ILLEGAL;
@@ -393,11 +395,13 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private PutMessageStatus checkStoreStatus() {
+        // 当前broker停止工作
         if (this.shutdown) {
             log.warn("message store has shutdown, so putMessage is forbidden");
             return PutMessageStatus.SERVICE_NOT_AVAILABLE;
         }
 
+        // broker为slave角色
         if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -406,6 +410,7 @@ public class DefaultMessageStore implements MessageStore {
             return PutMessageStatus.SERVICE_NOT_AVAILABLE;
         }
 
+        // 当前broker不支持写入
         if (!this.runningFlags.isWriteable()) {
             long value = this.printTimes.getAndIncrement();
             if ((value % 50000) == 0) {
@@ -485,10 +490,12 @@ public class DefaultMessageStore implements MessageStore {
     @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
         PutMessageStatus checkStoreStatus = this.checkStoreStatus();
+        // 检查存储状态
         if (checkStoreStatus != PutMessageStatus.PUT_OK) {
             return new PutMessageResult(checkStoreStatus, null);
         }
 
+        // 检查消息
         PutMessageStatus msgCheckStatus = this.checkMessage(msg);
         if (msgCheckStatus == PutMessageStatus.MESSAGE_ILLEGAL) {
             return new PutMessageResult(msgCheckStatus, null);

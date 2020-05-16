@@ -794,11 +794,15 @@ public class CommitLog {
         if (tranType == MessageSysFlag.TRANSACTION_NOT_TYPE
             || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) {
             // Delay Delivery
+            // 消息的延迟级别大于0，将消息的原主题名称和队列id存储到消息的属性中
+            //
             if (msg.getDelayTimeLevel() > 0) {
                 if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
                     msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
                 }
 
+                // 用SCHEDULE TOPIC更换原有主题
+                // 用消息队列id更新原有id
                 topic = ScheduleMessageService.SCHEDULE_TOPIC;
                 queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());
 
@@ -824,6 +828,14 @@ public class CommitLog {
 
         long elapsedTimeInLock = 0;
 
+        // 获取当前可以写入的CommitLog
+        /**
+         * Commitlog文件存储 目录为${ROCKET_HOME}/store/commitlog 目录，每一个文件默 认 lG，
+         * 一个文件写满后再创建另外一个，以该文件中第一个偏移量为文件名，偏移量小于 20位用 0补齐。
+         * 第一个文件初始偏移量为 0，第二个文件的 1073741824，代 表该文件中的第一条消息的物理偏移量为 1073741824，
+         * 这样根据物理偏移量能快速定位 到消息 。
+         * MappedFileQueue 可以 看 作 是${ROCKET_HOME}/store/commitlog文件夹，而 MappedFile 则对应该文件夹下一个个的文件 。
+         */
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
