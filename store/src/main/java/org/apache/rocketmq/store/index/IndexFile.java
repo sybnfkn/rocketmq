@@ -91,6 +91,9 @@ public class IndexFile {
 
     public boolean putKey(final String key, final long phyOffset, final long storeTimestamp) {
         if (this.indexHeader.getIndexCount() < this.indexNum) {
+            // 如果当前索引文件未写满根据key算出hashcode,
+            // 根据keyhash对hash槽数量取余定位hashcode对应的hash槽下标
+            // hashcode对应的hash槽物理地址为indexHeader头部(40字节)加上下标乘以每个hash槽大小(4字节)
             int keyHash = indexKeyHashMethod(key);
             int slotPos = keyHash % this.hashSlotNum;
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
