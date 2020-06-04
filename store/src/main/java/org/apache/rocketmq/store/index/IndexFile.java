@@ -105,6 +105,7 @@ public class IndexFile {
                 // fileLock = this.fileChannel.lock(absSlotPos, hashSlotSize,
                 // false);
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
+                // 读取hash槽存储数据,如果hash槽存储数据小于0或者大于当前索引文件中索引条目格式.置为0
                 if (slotValue <= invalidIndex || slotValue > this.indexHeader.getIndexCount()) {
                     slotValue = invalidIndex;
                 }
@@ -113,6 +114,7 @@ public class IndexFile {
 
                 timeDiff = timeDiff / 1000;
 
+                // 计算存储消息时间戳和第一个消息时间戳差值
                 if (this.indexHeader.getBeginTimestamp() <= 0) {
                     timeDiff = 0;
                 } else if (timeDiff > Integer.MAX_VALUE) {
@@ -121,15 +123,19 @@ public class IndexFile {
                     timeDiff = 0;
                 }
 
+                // 将数据条目存储到IndeXfile
+                // 计算新添加条目条目起始物理偏移量
                 int absIndexPos =
                     IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize
                         + this.indexHeader.getIndexCount() * indexSize;
 
+                // 依次将这些值插入buffer中
                 this.mappedByteBuffer.putInt(absIndexPos, keyHash);
                 this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8 + 4, slotValue);
 
+                // 将当前index包含条目数存储hash槽中,覆盖原来的hash槽的值
                 this.mappedByteBuffer.putInt(absSlotPos, this.indexHeader.getIndexCount());
 
                 if (this.indexHeader.getIndexCount() <= 1) {

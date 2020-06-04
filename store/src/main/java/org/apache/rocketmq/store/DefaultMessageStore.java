@@ -951,6 +951,15 @@ public class DefaultMessageStore implements MessageStore {
         this.cleanCommitLogService.excuteDeleteFilesManualy();
     }
 
+    /**
+     * 查询消息,根据key
+     * @param topic topic of the message.
+     * @param key message key.
+     * @param maxNum maximum number of the messages possible.
+     * @param begin begin timestamp.
+     * @param end end timestamp.
+     * @return
+     */
     @Override
     public QueryMessageResult queryMessage(String topic, String key, int maxNum, long begin, long end) {
         QueryMessageResult queryMessageResult = new QueryMessageResult();
