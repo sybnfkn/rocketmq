@@ -198,10 +198,10 @@ public class DefaultMessageStore implements MessageStore {
                 result = result && this.scheduleMessageService.load();
             }
 
-            // load Commit Log
+            // load Commit Log 加载CommitLog
             result = result && this.commitLog.load();
 
-            // load Consume Queue
+            // load Consume Queue 加载ConcumeQueue
             result = result && this.loadConsumeQueue();
 
             if (result) {
@@ -440,6 +440,7 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+        // commitlog提交
         CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
 
         putResultFuture.thenAccept((result) -> {
@@ -1560,6 +1561,9 @@ public class DefaultMessageStore implements MessageStore {
         }, 6, TimeUnit.SECONDS);
     }
 
+    /**
+     * 构建consumeQueue
+     */
     class CommitLogDispatcherBuildConsumeQueue implements CommitLogDispatcher {
 
         @Override
@@ -1577,6 +1581,9 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 构建索引
+     */
     class CommitLogDispatcherBuildIndex implements CommitLogDispatcher {
 
         @Override
@@ -1897,6 +1904,8 @@ public class DefaultMessageStore implements MessageStore {
             if (this.reputFromOffset < DefaultMessageStore.this.commitLog.getMinOffset()) {
                 log.warn("The reputFromOffset={} is smaller than minPyOffset={}, this usually indicate that the dispatch behind too much and the commitlog has expired.",
                     this.reputFromOffset, DefaultMessageStore.this.commitLog.getMinOffset());
+                // 该参数的含义是 ReputMessageService从哪个物理偏移量开始转发消息 给 ConsumeQueu巳和 IndexFile。
+                // 如果允许重复转发， reputFromOffset设置为 CommitLog的 提交指针;如果不允许重复转发， reputFromOffset设置为 Commitlog 的内存中最大偏移量
                 this.reputFromOffset = DefaultMessageStore.this.commitLog.getMinOffset();
             }
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
@@ -1918,6 +1927,7 @@ public class DefaultMessageStore implements MessageStore {
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    // 构建consumeQueue和index
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
@@ -1974,6 +1984,7 @@ public class DefaultMessageStore implements MessageStore {
 
             while (!this.isStopped()) {
                 try {
+                    // 每执行一次任务推送休息 1 毫秒就继续尝试推送消息到消息 消费队列和索引文件，消息消费转发的核心实现在 doReput方法中实现
                     Thread.sleep(1);
                     this.doReput();
                 } catch (Exception e) {

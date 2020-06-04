@@ -258,6 +258,7 @@ public class BrokerController {
             }
         }
 
+        // 启动加载
         result = result && this.messageStore.load();
 
         if (result) {

@@ -852,7 +852,7 @@ public class CommitLog {
             msg.setStoreTimestamp(beginLockTimestamp);
 
             /**
-             * 如果 rnappedFile 为空，表明$ {ROCKET_HOME}/store/ cornrnitlog 目录下不存在任何文件，
+             * 如果 mappedFile 为空，表明$ {ROCKET_HOME}/store/ cornrnitlog 目录下不存在任何文件，
              * 说明本次消息是第一次消息发送，用偏移量 0创建第 一个 commit 文件，文件为 00000000000000000000，
              * 如果文件创建失败，抛出 CREATE MAPEDFILE FAILED，很有可能是磁盘空间不足或权限不够。
              */
@@ -921,7 +921,9 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        // 刷盘
         handleDiskFlush(result, putMessageResult, msg);
+        // 高可用HA
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
@@ -1478,6 +1480,7 @@ public class CommitLog {
             }
         }
 
+        // 单线程刷盘
         public void run() {
             CommitLog.log.info(this.getServiceName() + " service started");
 
@@ -1572,6 +1575,7 @@ public class CommitLog {
             }
 
             // Record ConsumeQueue information
+            // 记录consumeQueue
             keyBuilder.setLength(0);
             keyBuilder.append(msgInner.getTopic());
             keyBuilder.append('-');

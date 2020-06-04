@@ -231,7 +231,7 @@ public class MappedFile extends ReferenceResource {
         assert messageExt != null;
         assert cb != null;
 
-        // 获取当前写指针
+        // 获取当前写指针，相当于数据的计数器
         int currentPos = this.wrotePosition.get();
 
         if (currentPos < this.fileSize) {
@@ -240,13 +240,17 @@ public class MappedFile extends ReferenceResource {
             byteBuffer.position(currentPos);
             AppendMessageResult result;
             if (messageExt instanceof MessageExtBrokerInner) {
+                // getFileFromOffset 文件初始化偏移量
+                // fileSize - currentPos   当前还有多大空间
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, (MessageExtBrokerInner) messageExt);
             } else if (messageExt instanceof MessageExtBatch) {
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, (MessageExtBatch) messageExt);
             } else {
                 return new AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);
             }
+            // 计数器增加相应长度
             this.wrotePosition.addAndGet(result.getWroteBytes());
+            // 存储完的时间
             this.storeTimestamp = result.getStoreTimestamp();
             return result;
         }
