@@ -94,8 +94,12 @@ public class IndexFile {
             // 如果当前索引文件未写满根据key算出hashcode,
             // 根据keyhash对hash槽数量取余定位hashcode对应的hash槽下标
             // hashcode对应的hash槽物理地址为indexHeader头部(40字节)加上下标乘以每个hash槽大小(4字节)
+
+            // key对应的位置
             int keyHash = indexKeyHashMethod(key);
+            // keyHash % 500*10000   槽所在的位置
             int slotPos = keyHash % this.hashSlotNum;
+            // 槽的物理地址
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
 
             FileLock fileLock = null;
@@ -129,7 +133,7 @@ public class IndexFile {
                     IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize
                         + this.indexHeader.getIndexCount() * indexSize;
 
-                // 依次将这些值插入buffer中
+                // 依次将这些值插入buffer中，采用追加的方式
                 this.mappedByteBuffer.putInt(absIndexPos, keyHash);
                 this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);
@@ -144,6 +148,7 @@ public class IndexFile {
                 }
 
                 this.indexHeader.incHashSlotCount();
+                // 增加index的数量
                 this.indexHeader.incIndexCount();
                 this.indexHeader.setEndPhyOffset(phyOffset);
                 this.indexHeader.setEndTimestamp(storeTimestamp);
