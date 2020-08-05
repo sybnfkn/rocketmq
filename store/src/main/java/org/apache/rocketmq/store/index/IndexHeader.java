@@ -22,11 +22,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IndexHeader {
     public static final int INDEX_HEADER_SIZE = 40;
+    // 索引文件包含消息的最小存储时间
     private static int beginTimestampIndex = 0;
+    // 索引文件包含消息的最大存储时间
     private static int endTimestampIndex = 8;
+    // 改索引文件中包含消息的最小的物理偏移量（commitlog文件偏移量）
     private static int beginPhyoffsetIndex = 16;
+    // 索引文件中包含消息的最大的物理偏移量
     private static int endPhyoffsetIndex = 24;
+    // hashslot个数，并不是hash槽使用的个数
     private static int hashSlotcountIndex = 32;
+    // index条目列表当前已经使用的个数，index条目按照顺序存储
     private static int indexCountIndex = 36;
     private final ByteBuffer byteBuffer;
     private AtomicLong beginTimestamp = new AtomicLong(0);

@@ -648,6 +648,7 @@ public class MQClientInstance {
                             }
 
                             // Update Pub info
+                            // 推送
                             {
                                 // 根据topicrouteData的List<QueueData>转换成topicPushlishInfo的List<MessageQueue>列表
                                 TopicPublishInfo publishInfo = topicRouteData2TopicPublishInfo(topic, topicRouteData);
@@ -663,6 +664,7 @@ public class MQClientInstance {
                             }
 
                             // Update sub info
+                            // 订阅
                             {
                                 Set<MessageQueue> subscribeInfo = topicRouteData2TopicSubscribeInfo(topic, topicRouteData);
                                 Iterator<Entry<String, MQConsumerInner>> it = this.consumerTable.entrySet().iterator();

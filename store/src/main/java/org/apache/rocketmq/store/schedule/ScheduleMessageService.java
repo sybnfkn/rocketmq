@@ -114,14 +114,17 @@ public class ScheduleMessageService extends ConfigManager {
     public void start() {
         if (started.compareAndSet(false, true)) {
             this.timer = new Timer("ScheduleMessageTimerThread", true);
+            //2 针对每个延迟级别，创建一个TimerTask
+            //2.1 迭代每个延迟级别：delayLevelTable是一个Map记录了每个延迟级别对应的延迟时间
             for (Map.Entry<Integer, Long> entry : this.delayLevelTable.entrySet()) {
+                //2.2 获得每个每个延迟级别的level和对应的延迟时间
                 Integer level = entry.getKey();
                 Long timeDelay = entry.getValue();
                 Long offset = this.offsetTable.get(level);
                 if (null == offset) {
                     offset = 0L;
                 }
-
+                //2.3 针对每个级别创建一个对应的TimerTask
                 if (timeDelay != null) {
                     this.timer.schedule(new DeliverDelayedMessageTimerTask(level, offset), FIRST_DELAY_TIME);
                 }

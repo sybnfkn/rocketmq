@@ -409,6 +409,7 @@ public abstract class NettyRemotingAbstract {
     public RemotingCommand invokeSyncImpl(final Channel channel, final RemotingCommand request,
         final long timeoutMillis)
         throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException {
+        // 发送出去的一个标示，网络通讯必须要一个ID衔接
         final int opaque = request.getOpaque();
 
         try {
@@ -432,6 +433,7 @@ public abstract class NettyRemotingAbstract {
                 }
             });
 
+            // 同步需要在这里等待
             RemotingCommand responseCommand = responseFuture.waitResponse(timeoutMillis);
             if (null == responseCommand) {
                 if (responseFuture.isSendRequestOK()) {
