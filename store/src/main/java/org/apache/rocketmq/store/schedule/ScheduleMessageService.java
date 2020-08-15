@@ -263,6 +263,9 @@ public class ScheduleMessageService extends ConfigManager {
             return result;
         }
 
+        /**
+         * 执行到期的消息
+         */
         public void executeOnTimeup() {
             ConsumeQueue cq =
                 ScheduleMessageService.this.defaultMessageStore.findConsumeQueue(SCHEDULE_TOPIC,
@@ -295,12 +298,14 @@ public class ScheduleMessageService extends ConfigManager {
                             }
 
                             long now = System.currentTimeMillis();
+                            // 正确的投递时间
                             long deliverTimestamp = this.correctDeliverTimestamp(now, tagsCode);
 
                             nextOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
 
                             long countdown = deliverTimestamp - now;
 
+                            // 定时消息到期
                             if (countdown <= 0) {
                                 MessageExt msgExt =
                                     ScheduleMessageService.this.defaultMessageStore.lookMessageByOffset(
@@ -314,6 +319,7 @@ public class ScheduleMessageService extends ConfigManager {
                                                     msgInner.getTopic(), msgInner);
                                             continue;
                                         }
+                                        // 将消息重新放入CommitLog中
                                         PutMessageResult putMessageResult =
                                             ScheduleMessageService.this.writeMessageStore
                                                 .putMessage(msgInner);

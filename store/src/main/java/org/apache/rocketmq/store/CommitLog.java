@@ -818,7 +818,7 @@ public class CommitLog {
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
                 msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
-
+                // 更新消息消息投递目标
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
             }
@@ -985,6 +985,7 @@ public class CommitLog {
 
     public void handleDiskFlush(AppendMessageResult result, PutMessageResult putMessageResult, MessageExt messageExt) {
         // Synchronization flush
+        // 同步刷盘
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
             if (messageExt.isWaitStoreMsgOK()) {
@@ -1008,6 +1009,7 @@ public class CommitLog {
             }
         }
         // Asynchronous flush
+        // 异步刷盘
         else {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                 flushCommitLogService.wakeup();

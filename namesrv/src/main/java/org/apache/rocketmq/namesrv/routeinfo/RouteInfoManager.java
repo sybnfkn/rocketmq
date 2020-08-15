@@ -116,8 +116,9 @@ public class RouteInfoManager {
         RegisterBrokerResult result = new RegisterBrokerResult();
         try {
             try {
+                // 读写锁，防止并发问题
                 this.lock.writeLock().lockInterruptibly();
-                // 所属集群设置
+                // 1.配置broker集群信息
                 Set<String> brokerNames = this.clusterAddrTable.get(clusterName);
                 if (null == brokerNames) {
                     brokerNames = new HashSet<String>();
@@ -139,23 +140,26 @@ public class RouteInfoManager {
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
+                    // 刷新操作，删除旧的东西
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
                 }
 
                 String oldAddr = brokerData.getBrokerAddrs().put(brokerId, brokerAddr);
+                // 是否是首次注册
                 registerFirst = registerFirst || (null == oldAddr);
 
                 // topic中队列消费信息
                 if (null != topicConfigWrapper
-                    && MixAll.MASTER_ID == brokerId) {
+                    && MixAll.MASTER_ID == brokerId /*master节点*/) {
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
                         || registerFirst) {
                         ConcurrentMap<String, TopicConfig> tcTable =
                             topicConfigWrapper.getTopicConfigTable();
                         if (tcTable != null) {
                             for (Map.Entry<String, TopicConfig> entry : tcTable.entrySet()) {
+                                // 更新topic的queue信息
                                 this.createAndUpdateQueueData(brokerName, entry.getValue());
                             }
                         }
@@ -184,6 +188,7 @@ public class RouteInfoManager {
                 if (MixAll.MASTER_ID != brokerId) {
                     String masterAddr = brokerData.getBrokerAddrs().get(MixAll.MASTER_ID);
                     if (masterAddr != null) {
+                        // 如果是 Slave Broker，需要在返回的信息中带上 master 的相关信息
                         BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.get(masterAddr);
                         if (brokerLiveInfo != null) {
                             result.setHaServerAddr(brokerLiveInfo.getHaServerAddr());
@@ -378,6 +383,11 @@ public class RouteInfoManager {
         }
     }
 
+    /**
+     * 客户端根据topic寻找路由信息
+     * @param topic
+     * @return
+     */
     public TopicRouteData pickupTopicRouteData(final String topic) {
         TopicRouteData topicRouteData = new TopicRouteData();
         boolean foundQueueData = false;
@@ -391,6 +401,7 @@ public class RouteInfoManager {
 
         try {
             try {
+                // 加读锁
                 this.lock.readLock().lockInterruptibly();
                 List<QueueData> queueDataList = this.topicQueueTable.get(topic);
                 if (queueDataList != null) {
