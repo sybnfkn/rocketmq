@@ -585,29 +585,40 @@ public class DefaultMessageStore implements MessageStore {
         long beginTime = this.getSystemClock().now();
 
         GetMessageStatus status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
-        long nextBeginOffset = offset;
-        long minOffset = 0;
-        long maxOffset = 0;
+        long nextBeginOffset = offset; // 待查找的队列偏移量
+        long minOffset = 0; // 当前队列最小偏移量
+        long maxOffset = 0; // 当前队列最大偏移量
 
         GetMessageResult getResult = new GetMessageResult();
 
+        // 当前commmitLog文件最大偏移量
         final long maxOffsetPy = this.commitLog.getMaxOffset();
 
+        // 查找consumequeue
         ConsumeQueue consumeQueue = findConsumeQueue(topic, queueId);
         if (consumeQueue != null) {
             minOffset = consumeQueue.getMinOffsetInQueue();
             maxOffset = consumeQueue.getMaxOffsetInQueue();
 
             if (maxOffset == 0) {
+                // 表示当前消费队列中没有消息，拉取结果 : NO_MESSAGE_IN_QUEUE。
+                //如果当前 Broker为主节点或 offsetChecklnSlave为也false， 下次拉取偏移量依然为 offset。
+                //如果当前 Broker为从节点， offsetCheckinS!ave为 true， 设置下次拉取偏移量为 0。
                 status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
                 nextBeginOffset = nextOffsetCorrection(offset, 0);
             } else if (offset < minOffset) {
+                // 表示 待拉取消息偏 移量 小于队列的起始偏 移量，拉 取结果为:
+                //OFFSET TOO SMALL。
+                // 如果当前 Broker为主节点或 offsetChecklnS!ave为 false，下次拉取偏移量依然为 offset。
+                // 如果当前 Broker为从节点并且 offsetChecklnS!ave为 true，下次拉取偏移量设置为 minOffseto
                 status = GetMessageStatus.OFFSET_TOO_SMALL;
                 nextBeginOffset = nextOffsetCorrection(offset, minOffset);
             } else if (offset == maxOffset) {
+                // 如果待 拉 取偏 移 量 等于 队列 最 大偏移 量 ，拉取结果 : OFFSET OVE盯 LOW ONE。 下次拉取偏移量依然为 offset。
                 status = GetMessageStatus.OFFSET_OVERFLOW_ONE;
                 nextBeginOffset = nextOffsetCorrection(offset, offset);
             } else if (offset > maxOffset) {
+                // 偏移量越界
                 status = GetMessageStatus.OFFSET_OVERFLOW_BADLY;
                 if (0 == minOffset) {
                     nextBeginOffset = nextOffsetCorrection(offset, minOffset);
@@ -615,6 +626,7 @@ public class DefaultMessageStore implements MessageStore {
                     nextBeginOffset = nextOffsetCorrection(offset, maxOffset);
                 }
             } else {
+                // 如果待拉取偏移量大于 minOffset并且小于 maxOffs时，从当前 offset处尝试拉 取 32 条消息
                 // ConsumeQueue消息队列中获取消息的描述信息
                 SelectMappedBufferResult bufferConsumeQueue = consumeQueue.getIndexBuffer(offset);
                 if (bufferConsumeQueue != null) {
@@ -731,6 +743,7 @@ public class DefaultMessageStore implements MessageStore {
         long elapsedTime = this.getSystemClock().now() - beginTime;
         this.storeStatsService.setGetMessageEntireTimeMax(elapsedTime);
 
+        // 根据主从同 步延迟，如果从节点数据包含下一次拉取的偏移量 ，设置下一次拉 取任务的 brokerId。
         getResult.setStatus(status);
         getResult.setNextBeginOffset(nextBeginOffset);
         getResult.setMaxOffset(maxOffset);

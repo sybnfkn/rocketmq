@@ -154,6 +154,7 @@ public class PullAPIWrapper {
         final CommunicationMode communicationMode, // 消息拉取模式，默认为异步拉取 。
         final PullCallback pullCallback // 从 Broker 拉取到消息后的回调方法 。
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+
         FindBrokerResult findBrokerResult =
             this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
                 this.recalculatePullFromWhichNode(mq), false);
@@ -192,7 +193,9 @@ public class PullAPIWrapper {
             requestHeader.setSubVersion(subVersion);
             requestHeader.setExpressionType(expressionType);
 
+
             String brokerAddr = findBrokerResult.getBrokerAddr();
+            // 如果消息过滤模式为类过滤， 则需要根据主题名称、 broker地址找到注册在 Broker上的 FilterServer地址，从 FilterServer上拉取消息，否则从 Broker上拉取消息。
             if (PullSysFlag.hasClassFilterFlag(sysFlagInner)) {
                 brokerAddr = computPullFromWhichFilterServer(mq.getTopic(), brokerAddr);
             }
