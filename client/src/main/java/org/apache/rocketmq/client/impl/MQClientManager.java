@@ -53,6 +53,8 @@ public class MQClientManager {
             instance =
                 new MQClientInstance(clientConfig.cloneClientConfig(),
                     this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook);
+            // 整个jvm只存在一个MQClientManager实例
+            // 同一个clientId只会创建一个
             MQClientInstance prev = this.factoryTable.putIfAbsent(clientId, instance);
             if (prev != null) {
                 instance = prev;
