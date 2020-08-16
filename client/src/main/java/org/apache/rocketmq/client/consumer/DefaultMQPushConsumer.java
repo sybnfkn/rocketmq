@@ -202,7 +202,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      *
      * <p>
      * The size of a message only measured by message body, so it's not accurate
-     * 默认值 100， 每 100 次流控后打 印流控日志 。
+     * 默认值 100， 每 1000 次流控后打 印流控日志 。
      */
     private int pullThresholdSizeForQueue = 100;
 
