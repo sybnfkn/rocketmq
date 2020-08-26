@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ManyPullRequest {
+    // 实际就是加到了这里
     private final ArrayList<PullRequest> pullRequestList = new ArrayList<>();
 
     public synchronized void addPullRequest(final PullRequest pullRequest) {
