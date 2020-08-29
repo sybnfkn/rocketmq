@@ -38,6 +38,15 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
  * Remote storage implementation
+ * 消息消费进度的读取，持久化与广播模式实现细节差不多，
+ * 集群模式消息进度如果从内 存中读取消费进度，
+ * 则从RemoteBrokerOffsetStore的
+ * ConcurrentMap<MessageQueue,AtomicLong> offsetTable =new ConcurrentHashMap<Messagequeue, AtomicLong>()中根据消息消费队列
+ * 获取其消息消费进度;
+ * 如果从磁盘读取，则发送网络请求，请求命令为 QUERY_CONSUMER_OFFSET。
+ * 持久化消息进度，则请求命令为 UPDATE_CONSUMER_OFFSET,
+ * 更新 ConsumerOffsetManage的 ConcurrentMap<String/* topic@group,ConcurrentMap< Integer/*消息队列 /, Long/*消息消费进度/> offsetTable,
+ *  Broker端默认 10s 持久化一次 消息进度，存储文件名:$ {RocketMQ_HOME}/store/config/consumerOffset.json。
  */
 public class RemoteBrokerOffsetStore implements OffsetStore {
     private final static InternalLogger log = ClientLogger.getLog();

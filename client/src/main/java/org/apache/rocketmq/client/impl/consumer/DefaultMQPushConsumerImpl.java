@@ -1178,6 +1178,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     public void resetRetryAndNamespace(final List<MessageExt> msgs, String consumerGroup) {
         final String groupTopic = MixAll.getRetryTopic(consumerGroup);
         for (MessageExt msg : msgs) {
+            // 将重试相关消息 的真正topic重置
             String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
             if (retryTopic != null && groupTopic.equals(msg.getTopic())) {
                 msg.setTopic(retryTopic);

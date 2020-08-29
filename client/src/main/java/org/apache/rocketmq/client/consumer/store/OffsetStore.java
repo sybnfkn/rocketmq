@@ -28,12 +28,13 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
  */
 public interface OffsetStore {
     /**
-     * Load
+     * Load 从消息进度存储文件加载进度到内存
      */
     void load() throws MQClientException;
 
     /**
      * Update the offset,store it in memory
+     * 更新内存中的消息进度
      */
     void updateOffset(final MessageQueue mq, final long offset, final boolean increaseOnly);
 
@@ -41,6 +42,7 @@ public interface OffsetStore {
      * Get offset from local storage
      *
      * @return The fetched offset
+     * 读取消息进度
      */
     long readOffset(final MessageQueue mq, final ReadOffsetType type);
 
@@ -56,6 +58,7 @@ public interface OffsetStore {
 
     /**
      * Remove offset
+     * 将消息队列进度从内存中移除
      */
     void removeOffset(MessageQueue mq);
 
@@ -68,6 +71,7 @@ public interface OffsetStore {
      * @param mq
      * @param offset
      * @param isOneway
+     * 更新存储在broker端的消息消费进度，使用集群模式
      */
     void updateConsumeOffsetToBroker(MessageQueue mq, long offset, boolean isOneway) throws RemotingException,
         MQBrokerException, InterruptedException, MQClientException;

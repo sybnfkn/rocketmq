@@ -1105,6 +1105,7 @@ public class MQClientAPIImpl {
         final long timeoutMillis,
         final int maxConsumeRetryTimes
     ) throws RemotingException, MQBrokerException, InterruptedException {
+
         ConsumerSendMsgBackRequestHeader requestHeader = new ConsumerSendMsgBackRequestHeader();
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUMER_SEND_MSG_BACK, requestHeader);
 
@@ -1115,6 +1116,7 @@ public class MQClientAPIImpl {
         requestHeader.setOriginMsgId(msg.getMsgId());
         requestHeader.setMaxReconsumeTimes(maxConsumeRetryTimes);
 
+        // 同步发送方式
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
             request, timeoutMillis);
         assert response != null;
