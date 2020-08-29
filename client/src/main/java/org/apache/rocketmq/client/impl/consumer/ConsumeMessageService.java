@@ -36,9 +36,10 @@ public interface ConsumeMessageService {
 
     ConsumeMessageDirectlyResult consumeMessageDirectly(final MessageExt msg, final String brokerName);
 
+
     void submitConsumeRequest(
-        final List<MessageExt> msgs,
-        final ProcessQueue processQueue,
-        final MessageQueue messageQueue,
-        final boolean dispathToConsume);
+        final List<MessageExt> msgs, // 消息列表，最多一次拉取32
+        final ProcessQueue processQueue, // 消息处理队列
+        final MessageQueue messageQueue, // 消息所属消费队列
+        final boolean dispathToConsume); // 是否转到消费线程池，并发消费忽略此参数
 }

@@ -48,16 +48,29 @@ import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 
+/**
+ * 从服务器拉取到消息后回调 PullCallBack 回调方法后，
+ * 先将消息放入到 ProccessQueue 中，然后把消息提交到消费线程池中执行，
+ * 也就是调用 Con sumeMessageService#submitConsumeRequest 开始进入到消息消费的世界中来
+ */
 public class ConsumeMessageConcurrentlyService implements ConsumeMessageService {
     private static final InternalLogger log = ClientLogger.getLog();
+    // 消息推模式实现类
     private final DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
+    // 消费者对象
     private final DefaultMQPushConsumer defaultMQPushConsumer;
+    // 并发消息业务事件类
     private final MessageListenerConcurrently messageListener;
+    // 消息消费任务队列
     private final BlockingQueue<Runnable> consumeRequestQueue;
+    // 消息消费线程池
     private final ThreadPoolExecutor consumeExecutor;
+    // 消费组
     private final String consumerGroup;
 
+    // 添加消费任务到consumeExecutor延迟调度器
     private final ScheduledExecutorService scheduledExecutorService;
+    // 定期删除过期消息线程池。
     private final ScheduledExecutorService cleanExpireMsgExecutors;
 
     public ConsumeMessageConcurrentlyService(DefaultMQPushConsumerImpl defaultMQPushConsumerImpl,
@@ -203,6 +216,14 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         final ProcessQueue processQueue,
         final MessageQueue messageQueue,
         final boolean dispatchToConsume) {
+        /**
+         * 在这里看来也就是一次消息消费 任务 ConsumeRequest 中包含的消息条数，默认为 1,
+         * msgs.size()默认最多为 32条，受 DefaultMQPushConsumer.pullBatchSize属性控制，
+         * 如果 msgs.size()小于 consumMessage­ BatchMaxSize， 则 直接将拉取到的消息放入到 ConsumeRequest 中，
+         * 然后将 consumeRequest 提交到消息消费者线程池中，如果提交过程中出现拒绝提交异常则延迟 5s再提交，
+         * 这里其 实是给出一种标准的拒绝提交实现方式，
+         * 实际过程中由于消费者线程池使用的任务队列为 LinkedBlockingQueue无界队列，故不会出现拒绝提交异常 。
+         */
         final int consumeBatchSize = this.defaultMQPushConsumer.getConsumeMessageBatchMaxSize();
         if (msgs.size() <= consumeBatchSize) {
             ConsumeRequest consumeRequest = new ConsumeRequest(msgs, processQueue, messageQueue);
@@ -212,6 +233,8 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 this.submitConsumeRequestLater(consumeRequest);
             }
         } else {
+            // 如果拉取的消息条数大于 consumeMessageBatchMaxSize，
+            // 则对拉取消息进行分 页，每页 consumeMessag巳BatchMaxSize条消息，创建多个 ConsumeRequest任务并提交到 消费线程池
             for (int total = 0; total < msgs.size(); ) {
                 List<MessageExt> msgThis = new ArrayList<MessageExt>(consumeBatchSize);
                 for (int i = 0; i < consumeBatchSize; i++, total++) {
@@ -260,6 +283,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         switch (status) {
             case CONSUME_SUCCESS:
                 if (ackIndex >= consumeRequest.getMsgs().size()) {
+                    //
                     ackIndex = consumeRequest.getMsgs().size() - 1;
                 }
                 int ok = ackIndex + 1;
@@ -268,6 +292,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 this.getConsumerStatsManager().incConsumeFailedTPS(consumerGroup, consumeRequest.getMessageQueue().getTopic(), failed);
                 break;
             case RECONSUME_LATER:
+                //
                 ackIndex = -1;
                 this.getConsumerStatsManager().incConsumeFailedTPS(consumerGroup, consumeRequest.getMessageQueue().getTopic(),
                     consumeRequest.getMsgs().size());
@@ -285,8 +310,11 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
             case CLUSTERING:
                 List<MessageExt> msgBackFailed = new ArrayList<MessageExt>(consumeRequest.getMsgs().size());
+                // 因为 ackIndex = -1 或者  consumeRequest.getMsgs().size() - 1;
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
+                    // 该批消息都 需要发 ACK 消息，如果消息发送 ACK 失败，则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，
+                    // 然后延迟 Ss 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);
@@ -294,9 +322,13 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                     }
                 }
 
+                // 发送ACK失败
                 if (!msgBackFailed.isEmpty()) {
+
                     consumeRequest.getMsgs().removeAll(msgBackFailed);
 
+                    // 该批消息都 需要发 ACK 消息，如果消息发送 ACK 失败，
+                    // 则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，然后延迟 Ss 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
                     this.submitConsumeRequestLater(msgBackFailed, consumeRequest.getProcessQueue(), consumeRequest.getMessageQueue());
                 }
                 break;
@@ -304,10 +336,17 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
+        // // 从ProcessQueue删除这批消息，offset就是移除消息后，最小的偏移量
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
+        // 用该偏移量更新消息消费进度，以便消费者重启能从上一次消费进度开始消费，避免消息重复消费
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
             this.defaultMQPushConsumerImpl.getOffsetStore().updateOffset(consumeRequest.getMessageQueue(), offset, true);
         }
+        // 值得重点注意的是当消息监听器返回 RECONSUME LATER，消息消 费进度也会向前推进，
+        // 用 ProcessQueue 中最小的队列偏移量调用消息消费 进度存储器 OffsetStore 更新消费进度，
+        // 这是因为当返回 RECONSUME_LATER, RocketMQ 会创建一条与原先消息属性相同的消息，
+        // 拥有一个唯一的新 msgld，并存储原消息 ID，该 消息会存入到 commitlog 文件中，与原先的消息没有任何关联，
+        // 那该消息当然也会进入到 ConsuemeQueue 队列中，将拥有一个全新的队列偏移量。
     }
 
     public ConsumerStatsManager getConsumerStatsManager() {
@@ -377,6 +416,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
 
         @Override
         public void run() {
+            // 进入具体消息消费时会先检查 processQueue 的 dropped，如果设置为 true，
+            // 则 停止该队列的消费，在进行消息重新负载时如果该消息 队列被分配给消费组 内其他消费者 后，
+            // 需要 droped 设置为 true， 阻止消费者继续消费不属于自己的消息队列
             if (this.processQueue.isDropped()) {
                 log.info("the message queue not be able to consume, because it's dropped. group={} {}", ConsumeMessageConcurrentlyService.this.consumerGroup, this.messageQueue);
                 return;
@@ -385,6 +427,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             MessageListenerConcurrently listener = ConsumeMessageConcurrentlyService.this.messageListener;
             ConsumeConcurrentlyContext context = new ConsumeConcurrentlyContext(messageQueue);
             ConsumeConcurrentlyStatus status = null;
+            // 恢复重试消息主题名 。这是 为什么呢?这是由消息重试机制决定的，
+            // RocketMQ 将消息存入 commitlog文件时，如果发现消息的延时级别 delayTimeLevel大于 0，
+            // 会首先 将重试主题存人在消息的属性中，然后设置主题名称为 SCHEDULE TOPIC，以便时间到 后重新参与消息消费 。
             defaultMQPushConsumerImpl.resetRetryAndNamespace(msgs, defaultMQPushConsumer.getConsumerGroup());
 
             ConsumeMessageContext consumeMessageContext = null;
@@ -408,6 +453,8 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                         MessageAccessor.setConsumeStartTimeStamp(msg, String.valueOf(System.currentTimeMillis()));
                     }
                 }
+                // 执行具体的消息消费，调用应用程序消息监昕器的 consumeMessage方法， 进入到具体的消息消费业务逻辑，返回该批消息的消费结果 。
+                // 最终将返回 CONSUMESUCCESS (消费成功)或 RECONSUMELATER (需要重新消费) 。
                 status = listener.consumeMessage(Collections.unmodifiableList(msgs), context);
             } catch (Throwable e) {
                 log.warn("consumeMessage exception: {} Group: {} Msgs: {} MQ: {}",
@@ -447,12 +494,16 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
                 consumeMessageContext.setStatus(status.toString());
                 consumeMessageContext.setSuccess(ConsumeConcurrentlyStatus.CONSUME_SUCCESS == status);
+                //
                 ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookAfter(consumeMessageContext);
             }
 
             ConsumeMessageConcurrentlyService.this.getConsumerStatsManager()
                 .incConsumeRT(ConsumeMessageConcurrentlyService.this.consumerGroup, messageQueue.getTopic(), consumeRT);
 
+            // 执行业务消息消费后，在处理结果前再次验证 一 下 ProcessQueue 的 isDroped 状态值，如果设置为 true，将不对结果进行处理，
+            // 也就是说如果在消息消费过程中进入到 Step4 时，如果由于由新的消费者加入或原先的消费者出现若机导致原先分给消费者的队列 在负载之后分配给别的消费者，
+            // 那么在应用程序的角度来看的话，消息会被重复消费
             if (!processQueue.isDropped()) {
                 ConsumeMessageConcurrentlyService.this.processConsumeResult(status, context, this);
             } else {
