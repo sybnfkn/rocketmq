@@ -403,15 +403,18 @@ public abstract class RebalanceImpl {
                 this.removeDirtyOffset(mq);
 
                 ProcessQueue pq = new ProcessQueue();
+                // 获取消费进度
                 long nextOffset = this.computePullFromWhere(mq);
                 if (nextOffset >= 0) {
                     ProcessQueue pre = this.processQueueTable.putIfAbsent(mq, pq);
                     if (pre != null) {
+                        // 队列存在
                         log.info("doRebalance, {}, mq already exists, {}", consumerGroup, mq);
                     } else {
                         log.info("doRebalance, {}, add a new mq, {}", consumerGroup, mq);
                         PullRequest pullRequest = new PullRequest();
                         pullRequest.setConsumerGroup(consumerGroup);
+                        // 下一次消费进度
                         pullRequest.setNextOffset(nextOffset);
                         pullRequest.setMessageQueue(mq);
                         pullRequest.setProcessQueue(pq);
@@ -423,7 +426,7 @@ public abstract class RebalanceImpl {
                 }
             }
         }
-
+        // 将PullRequest加入PullMessageService中，唤醒PullMessageService线程
         this.dispatchPullRequest(pullRequestList);
 
         return changed;
