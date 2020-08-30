@@ -36,6 +36,7 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 public class ConsumerManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
+
     private final ConcurrentMap<String/* Group */, ConsumerGroupInfo> consumerTable =
         new ConcurrentHashMap<String, ConsumerGroupInfo>(1024);
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
@@ -99,6 +100,7 @@ public class ConsumerManager {
         ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
         final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable) {
 
+        // 查找consumer group信息，如果没有，创建一个新的
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null == consumerGroupInfo) {
             ConsumerGroupInfo tmp = new ConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere);
@@ -106,11 +108,14 @@ public class ConsumerManager {
             consumerGroupInfo = prev != null ? prev : tmp;
         }
 
+        // 消费者组下实例信息是否发生变化
         boolean r1 =
             consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
                 consumeFromWhere);
+        // 消费者订阅信息是否发生变化
         boolean r2 = consumerGroupInfo.updateSubscription(subList);
 
+        // 如果满足任意条件，通知这个消费者组所有实例rebalance
         if (r1 || r2) {
             if (isNotifyConsumerIdsChangedEnable) {
                 this.consumerIdsChangeListener.handle(ConsumerGroupEvent.CHANGE, group, consumerGroupInfo.getAllChannel());

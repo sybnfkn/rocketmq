@@ -224,6 +224,7 @@ public class ProcessQueue {
                     msgCount.addAndGet(removedCnt);
 
                     if (!msgTreeMap.isEmpty()) {
+                        //
                         result = msgTreeMap.firstKey();
                     }
                 }
