@@ -671,9 +671,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 break;
         }
 
+        // 2 从nameserver更新topic路由信息
         this.updateTopicSubscribeInfoWhenSubscriptionChanged();
+        // 检查consumer配置
         this.mQClientFactory.checkClientInBroker();
+        // 向每个broker发送心跳
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
+        // 立即触发rebalance
         this.mQClientFactory.rebalanceImmediately();
     }
 

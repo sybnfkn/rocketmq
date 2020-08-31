@@ -987,6 +987,10 @@ public class MQClientInstance {
         this.adminExtTable.remove(group);
     }
 
+    /**
+     *
+     * 立刻rebalance
+     */
     public void rebalanceImmediately() {
         this.rebalanceService.wakeup();
     }

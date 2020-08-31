@@ -121,6 +121,7 @@ public abstract class ServiceThread implements Runnable {
     }
 
     public void wakeup() {
+        // 此处可以防止多个请求进来，同时唤醒线程
         if (hasNotified.compareAndSet(false, true)) {
             waitPoint.countDown(); // notify
         }
