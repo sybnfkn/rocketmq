@@ -539,6 +539,7 @@ public class MQClientInstance {
     }
 
     private void sendHeartbeatToAllBroker() {
+        // 准备心跳数据
         final HeartbeatData heartbeatData = this.prepareHeartbeatData();
         final boolean producerEmpty = heartbeatData.getProducerDataSet().isEmpty();
         final boolean consumerEmpty = heartbeatData.getConsumerDataSet().isEmpty();
@@ -715,23 +716,23 @@ public class MQClientInstance {
         // clientID
         heartbeatData.setClientID(this.clientId);
 
-        // Consumer
+        // Consumer 心跳信息
         for (Map.Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) {
             MQConsumerInner impl = entry.getValue();
             if (impl != null) {
                 ConsumerData consumerData = new ConsumerData();
-                consumerData.setGroupName(impl.groupName());
-                consumerData.setConsumeType(impl.consumeType());
-                consumerData.setMessageModel(impl.messageModel());
-                consumerData.setConsumeFromWhere(impl.consumeFromWhere());
-                consumerData.getSubscriptionDataSet().addAll(impl.subscriptions());
+                consumerData.setGroupName(impl.groupName()); // 消费者名称
+                consumerData.setConsumeType(impl.consumeType()); // 消费类型
+                consumerData.setMessageModel(impl.messageModel()); // 消费模式
+                consumerData.setConsumeFromWhere(impl.consumeFromWhere()); // 从什么位置开始消费
+                consumerData.getSubscriptionDataSet().addAll(impl.subscriptions()); // 每个topic的订阅信息
                 consumerData.setUnitMode(impl.isUnitMode());
 
                 heartbeatData.getConsumerDataSet().add(consumerData);
             }
         }
 
-        // Producer
+        // Producer 心跳信息
         for (Map.Entry<String/* group */, MQProducerInner> entry : this.producerTable.entrySet()) {
             MQProducerInner impl = entry.getValue();
             if (impl != null) {

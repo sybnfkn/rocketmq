@@ -891,10 +891,12 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     private void updateTopicSubscribeInfoWhenSubscriptionChanged() {
+        // 获取订阅当前consumer订阅所有topic信息，key为topic     value为SubscriptionData
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {
             for (final Map.Entry<String, SubscriptionData> entry : subTable.entrySet()) {
                 final String topic = entry.getKey();
+                // 从namespace逐一更新每个topic路由信息
                 this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic);
             }
         }
