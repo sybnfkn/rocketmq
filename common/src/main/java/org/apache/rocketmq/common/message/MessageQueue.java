@@ -106,6 +106,8 @@ public class MessageQueue implements Comparable<MessageQueue>, Serializable {
             }
         }
 
+        // 先按照brokerName排序
+        // 再按照queueId排序
         {
             int result = this.brokerName.compareTo(o.brokerName);
             if (result != 0) {

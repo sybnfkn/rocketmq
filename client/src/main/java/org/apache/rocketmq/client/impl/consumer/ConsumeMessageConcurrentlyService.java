@@ -325,10 +325,11 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 // 发送ACK失败
                 if (!msgBackFailed.isEmpty()) {
 
+                    // 如果发送back失败，这里将这些消息重新消费，此次操作不会移动他们的偏移量
                     consumeRequest.getMsgs().removeAll(msgBackFailed);
 
                     // 该批消息都 需要发 ACK 消息，如果消息发送 ACK 失败，
-                    // 则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，然后延迟 Ss 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
+                    // 则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，然后延迟 5s 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
                     this.submitConsumeRequestLater(msgBackFailed, consumeRequest.getProcessQueue(), consumeRequest.getMessageQueue());
                 }
                 break;
@@ -336,7 +337,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
-        // // 从ProcessQueue删除这批消息，offset就是移除消息后，最小的偏移量
+        // // 从ProcessQueue删除这批消息(所有消息都会从这里移除奥)，offset就是移除消息后，最小的偏移量
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
         // 用该偏移量更新消息消费进度，以便消费者重启能从上一次消费进度开始消费，避免消息重复消费
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
@@ -429,7 +430,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             ConsumeConcurrentlyStatus status = null;
             // 恢复重试消息主题名 。这是 为什么呢?这是由消息重试机制决定的，
             // RocketMQ 将消息存入 commitlog文件时，如果发现消息的延时级别 delayTimeLevel大于 0，
-            // 会首先 将重试主题存人在消息的属性中，然后设置主题名称为 SCHEDULE TOPIC，以便时间到 后重新参与消息消费 。
+            // 会首先 将重试主题存人在消息的属性中，然后设置主题名称为 SCHEDULE_TOPIC，以便时间到 后重新参与消息消费 。
             defaultMQPushConsumerImpl.resetRetryAndNamespace(msgs, defaultMQPushConsumer.getConsumerGroup());
 
             ConsumeMessageContext consumeMessageContext = null;

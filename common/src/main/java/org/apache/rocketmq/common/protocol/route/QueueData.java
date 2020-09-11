@@ -103,6 +103,11 @@ public class QueueData implements Comparable<QueueData> {
             + "]";
     }
 
+    /**
+     * 按照brokerName排序
+     * @param o
+     * @return
+     */
     @Override
     public int compareTo(QueueData o) {
         return this.brokerName.compareTo(o.getBrokerName());

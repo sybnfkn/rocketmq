@@ -305,7 +305,7 @@ public abstract class RebalanceImpl {
 
                     // 对比消息队列是否发生变化，主要思路是遍历当前负载队列集合，
                     // 如果队列不在新分 配队列集合中，需要将该队列停止消费并保存消费进度;
-                    // 遍历已分配的队列，如果队列不 在队列负载表中( processQueueTable) 则需要创建该队列拉取任务 PullRequest，
+                    // 遍历已分配的队列，如果队列不 在队列负载表中( processQueueTable) 则需要创建该队列拉取任务 *****PullRequest*******，
                     // 然后添加 到 PullMessageService线程的 pullRequestQueue 中， PulIMessageService才会继续拉取任务。
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, allocateResultSet, isOrder);
                     if (changed) {
