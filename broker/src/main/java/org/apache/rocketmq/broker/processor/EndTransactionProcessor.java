@@ -124,18 +124,23 @@ public class EndTransactionProcessor extends AsyncNettyRequestProcessor implemen
         }
         OperationResult result = new OperationResult();
         if (MessageSysFlag.TRANSACTION_COMMIT_TYPE == requestHeader.getCommitOrRollback()) {
+            // 获取消息的物理偏移量
             result = this.brokerController.getTransactionalMessageService().commitMessage(requestHeader);
             if (result.getResponseCode() == ResponseCode.SUCCESS) {
                 RemotingCommand res = checkPrepareMessage(result.getPrepareMessage(), requestHeader);
                 if (res.getCode() == ResponseCode.SUCCESS) {
+                    // 恢复消息主题，消费队列，构建新的消息
                     MessageExtBrokerInner msgInner = endMessageTransaction(result.getPrepareMessage());
                     msgInner.setSysFlag(MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), requestHeader.getCommitOrRollback()));
                     msgInner.setQueueOffset(requestHeader.getTranStateTableOffset());
                     msgInner.setPreparedTransactionOffset(requestHeader.getCommitLogOffset());
                     msgInner.setStoreTimestamp(result.getPrepareMessage().getStoreTimestamp());
                     MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_TRANSACTION_PREPARED);
+                    // 将消息再次存入commitlog文件中，供消费者消费
                     RemotingCommand sendResult = sendFinalMessage(msgInner);
                     if (sendResult.getCode() == ResponseCode.SUCCESS) {
+                        // 删除prepare消息，不是真正删除，只是将prepare消息存储到RMQ_SYS_TRANS_OP_HALF_TOPIC
+                        // 表示该事务消息已经处理过了（回滚或者提交）
                         this.brokerController.getTransactionalMessageService().deletePrepareMessage(result.getPrepareMessage());
                     }
                     return sendResult;
@@ -143,6 +148,7 @@ public class EndTransactionProcessor extends AsyncNettyRequestProcessor implemen
                 return res;
             }
         } else if (MessageSysFlag.TRANSACTION_ROLLBACK_TYPE == requestHeader.getCommitOrRollback()) {
+            // 回滚 和提交区别，无需将消息恢复为原主题，直接删除prepare消息，也就是将预处理消息放到OP_TOPIC
             result = this.brokerController.getTransactionalMessageService().rollbackMessage(requestHeader);
             if (result.getResponseCode() == ResponseCode.SUCCESS) {
                 RemotingCommand res = checkPrepareMessage(result.getPrepareMessage(), requestHeader);
@@ -194,6 +200,7 @@ public class EndTransactionProcessor extends AsyncNettyRequestProcessor implemen
 
     private MessageExtBrokerInner endMessageTransaction(MessageExt msgExt) {
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+
         msgInner.setTopic(msgExt.getUserProperty(MessageConst.PROPERTY_REAL_TOPIC));
         msgInner.setQueueId(Integer.parseInt(msgExt.getUserProperty(MessageConst.PROPERTY_REAL_QUEUE_ID)));
         msgInner.setBody(msgExt.getBody());

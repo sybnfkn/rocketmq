@@ -1240,8 +1240,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
         Validators.checkMessage(msg, this.defaultMQProducer);
 
+        // 标记半消息
         SendResult sendResult = null;
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, "true");
+        // 设置生产者组目的是查询事物消息本地事物状态时，从生产者组随机选择一个消息生产者即可，然后同步调用方式向rocketmq发送消息
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());
         try {
             sendResult = this.send(msg);
@@ -1261,6 +1263,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     if (null != transactionId && !"".equals(transactionId)) {
                         msg.setTransactionId(transactionId);
                     }
+                    // 半消息发送成功，执行本地事物
                     if (null != localTransactionExecuter) {
                         localTransactionState = localTransactionExecuter.executeLocalTransactionBranch(msg, arg);
                     } else if (transactionListener != null) {
@@ -1282,6 +1285,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
             }
             break;
+            // 如果半消息发送broker失败
             case FLUSH_DISK_TIMEOUT:
             case FLUSH_SLAVE_TIMEOUT:
             case SLAVE_NOT_AVAILABLE:
@@ -1292,6 +1296,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
 
         try {
+           // 向broker发送一个本地事物执行结果
             this.endTransaction(sendResult, localTransactionState, localException);
         } catch (Exception e) {
             log.warn("local transaction execute " + localTransactionState + ", but end broker transaction failed", e);
@@ -1325,7 +1330,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         } else {
             id = MessageDecoder.decodeMessageId(sendResult.getMsgId());
         }
+
         String transactionId = sendResult.getTransactionId();
+        // 根据消息所属队列获取broker的IP和端口信息，然后发送事务结束命令
         final String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(sendResult.getMessageQueue().getBrokerName());
         EndTransactionRequestHeader requestHeader = new EndTransactionRequestHeader();
         requestHeader.setTransactionId(transactionId);
