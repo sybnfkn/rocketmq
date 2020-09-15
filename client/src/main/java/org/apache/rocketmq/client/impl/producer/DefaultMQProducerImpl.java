@@ -1338,10 +1338,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         requestHeader.setTransactionId(transactionId);
         requestHeader.setCommitLogOffset(id.getOffset());
         switch (localTransactionState) {
-            case COMMIT_MESSAGE:
+            case COMMIT_MESSAGE: // 提交（执行本地成功）
                 requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_COMMIT_TYPE);
                 break;
-            case ROLLBACK_MESSAGE:
+            case ROLLBACK_MESSAGE: // 回滚（1。发送prepare异常   2。执行本地事务异常）
                 requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_ROLLBACK_TYPE);
                 break;
             case UNKNOW:

@@ -138,6 +138,7 @@ public class EndTransactionProcessor extends AsyncNettyRequestProcessor implemen
                     MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_TRANSACTION_PREPARED);
                     // 将消息再次存入commitlog文件中，供消费者消费
                     RemotingCommand sendResult = sendFinalMessage(msgInner);
+
                     if (sendResult.getCode() == ResponseCode.SUCCESS) {
                         // 删除prepare消息，不是真正删除，只是将prepare消息存储到RMQ_SYS_TRANS_OP_HALF_TOPIC
                         // 表示该事务消息已经处理过了（回滚或者提交）
