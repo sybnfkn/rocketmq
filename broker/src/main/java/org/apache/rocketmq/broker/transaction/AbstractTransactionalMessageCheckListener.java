@@ -58,6 +58,12 @@ public abstract class AbstractTransactionalMessageCheckListener {
         this.brokerController = brokerController;
     }
 
+    /**
+     * 首先构建事务状态回查请求消息，核心参数包含消息 offsetld、 消息 ID (索引)、 消息 事务 ID、事务消息队列中的偏移量、消息主题 、 消息队列 。
+     * 然后根据消息的生产者组，从 中随机选择一个消息发送者 。 最后 向消息发送者发送事务回查命令 。
+     * @param msgExt
+     * @throws Exception
+     */
     public void sendCheckMessage(MessageExt msgExt) throws Exception {
         CheckTransactionStateRequestHeader checkTransactionStateRequestHeader = new CheckTransactionStateRequestHeader();
         checkTransactionStateRequestHeader.setCommitLogOffset(msgExt.getCommitLogOffset());

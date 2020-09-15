@@ -262,6 +262,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                                 //TRANS HALF TOPIC 主题中，发送成功 则返回 true， 否 则返回 false， 这里还有一个实现 关键点 。
                                 continue;
                             }
+                            // 事务回查
                             listener.resolveHalfMsg(msgExt);
                         } else {
                             // 12。如果无法判断是否发送回查消息，则加载更多的己处理消息进行筛选。
