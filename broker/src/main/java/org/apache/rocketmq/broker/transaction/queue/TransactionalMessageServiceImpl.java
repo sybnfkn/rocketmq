@@ -137,10 +137,12 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
             log.debug("Check topic={}, queues={}", topic, msgQueues);
             for (MessageQueue messageQueue : msgQueues) {
                 long startTime = System.currentTimeMillis();
-                // 获取已处理消息的消息消 费队列，其主题为 : RMQ SYS_TRANS_OP_HALF_TOPIC。
+                // 获取已处理消息的消息消费队列，其主题为 : RMQ SYS_TRANS_OP_HALF_TOPIC。
                 MessageQueue opQueue = getOpQueue(messageQueue);
+                // 获取两个队列的偏移量
                 long halfOffset = transactionalMessageBridge.fetchConsumeOffset(messageQueue);
                 long opOffset = transactionalMessageBridge.fetchConsumeOffset(opQueue);
+
                 log.info("Before check, the queue={} msgOffset={} opOffset={}", messageQueue, halfOffset, opOffset);
                 if (halfOffset < 0 || opOffset < 0) {
                     log.error("MessageQueue: {} illegal offset read: {}, op offset: {},skip this queue", messageQueue,
@@ -337,13 +339,17 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
             return pullResult;
         }
         for (MessageExt opMessageExt : opMsg) {
+            // op消息的body体存放这half消息的偏移量字段
             Long queueOffset = getLong(new String(opMessageExt.getBody(), TransactionalMessageUtil.charset));
             log.debug("Topic: {} tags: {}, OpOffset: {}, HalfOffset: {}", opMessageExt.getTopic(),
                 opMessageExt.getTags(), opMessageExt.getQueueOffset(), queueOffset);
             if (TransactionalMessageUtil.REMOVETAG.equals(opMessageExt.getTags())) {
                 if (queueOffset < miniOffset) {
+                    // 已经处理完成的（有些消息可能已经处理完成了，但是受限于前面没有处理完成，偏移量还是以前的旧的）
                     doneOpOffset.add(opMessageExt.getQueueOffset());
                 } else {
+                    // key：prepare消息的偏移量
+                    // value：op_half消息的偏移量
                     removeMap.put(queueOffset, opMessageExt.getQueueOffset());
                 }
             } else {
@@ -505,6 +511,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
 
     @Override
     public boolean deletePrepareMessage(MessageExt msgExt) {
+        // 注意这个标示
         if (this.transactionalMessageBridge.putOpMessage(msgExt, TransactionalMessageUtil.REMOVETAG)) {
             log.debug("Transaction op message write successfully. messageId={}, queueId={} msgExt:{}", msgExt.getMsgId(), msgExt.getQueueId(), msgExt);
             return true;
