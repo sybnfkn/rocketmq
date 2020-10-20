@@ -143,6 +143,7 @@ public class MQClientInstance {
 
         this.mQAdminImpl = new MQAdminImpl(this);
 
+        // 拉取消息的线程
         this.pullMessageService = new PullMessageService(this);
 
         this.rebalanceService = new RebalanceService(this);
