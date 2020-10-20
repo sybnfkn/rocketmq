@@ -117,6 +117,7 @@ public class DefaultLitePullConsumerImpl implements MQConsumerInner {
 
     private DefaultLitePullConsumer defaultLitePullConsumer;
 
+    // 一个消费队列一个拉取线程
     private final ConcurrentMap<MessageQueue, PullTaskImpl> taskTable =
         new ConcurrentHashMap<MessageQueue, PullTaskImpl>();
 
@@ -124,6 +125,7 @@ public class DefaultLitePullConsumerImpl implements MQConsumerInner {
 
     private final BlockingQueue<ConsumeRequest> consumeRequestCache = new LinkedBlockingQueue<ConsumeRequest>();
 
+    // 拉取消息的线程池
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
     private final ScheduledExecutorService scheduledExecutorService;
@@ -145,6 +147,7 @@ public class DefaultLitePullConsumerImpl implements MQConsumerInner {
     public DefaultLitePullConsumerImpl(final DefaultLitePullConsumer defaultLitePullConsumer, final RPCHook rpcHook) {
         this.defaultLitePullConsumer = defaultLitePullConsumer;
         this.rpcHook = rpcHook;
+
         this.scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
             this.defaultLitePullConsumer.getPullThreadNums(),
             new ThreadFactoryImpl("PullMsgThread-" + this.defaultLitePullConsumer.getConsumerGroup())

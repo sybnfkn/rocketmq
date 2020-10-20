@@ -641,8 +641,11 @@ public class DefaultMessageStore implements MessageStore {
                         final boolean diskFallRecorded = this.messageStoreConfig.isDiskFallRecorded();
                         ConsumeQueueExt.CqExtUnit cqExtUnit = new ConsumeQueueExt.CqExtUnit();
                         for (; i < bufferConsumeQueue.getSize() && i < maxFilterMessageCount; i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
+                            // 偏移量占8个字节
                             long offsetPy = bufferConsumeQueue.getByteBuffer().getLong();
+                            // 长度占4个字节
                             int sizePy = bufferConsumeQueue.getByteBuffer().getInt();
+                            // 标签占8个字节
                             long tagsCode = bufferConsumeQueue.getByteBuffer().getLong();
 
                             maxPhyOffsetPulling = offsetPy;

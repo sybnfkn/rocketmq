@@ -244,8 +244,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         /**
          * 进行消息拉取流控 。 从消息消费数量与消费间隔两个维度进行控制 。
          */
-        // 消息处理总数，如果 ProcessQueue 当前处理的消息条数超过了 pu!IThresholdFor­ Queue=lOOO将触发流控，放弃本次拉取任务，并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
-        // 每触发 1000 次流控后输出提示语: the consumer message buffer is full, so do flow control, minOffset={队列最小偏移量 }， maxOffset={队列最大偏移量 }， size={消 息总条数} ,
+        // 消息处理总数，如果 ProcessQueue 当前处理的消息条数超过了 pullThresholdFor­ Queue=lOOO将触发流控，放弃本次拉取任务，并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
         // p u l l R e q u e s t = {拉取任务} , f l o w C o n t r o l T i m e s = {流控触发次数} 。
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
@@ -259,7 +258,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
         // ProcessQueue 中队列最大偏移量与最小偏离量的间距， 不能超过 consumeConcurrently­ MaxSpan，否则触发流控，
         // 每触发 1000 次输出提示语: the queue's messages, span too long, so do flow control, minOffset={队列最小偏移量}，
-        // maxOffs巳t={队列最大偏移量}， maxSpan={间隔}， pullRequest={拉取任务信息}，flowControlTimes={流控触发次数}。
+        // maxOffset={队列最大偏移量}， maxSpan={间隔}， pullRequest={拉取任务信息}，flowControlTimes={流控触发次数}。
         // 这里主要的考量是担心一 条消息堵塞，消息进度无法向前推进，可能造成大量消息重复消费 。
         if (cachedMessageSizeInMiB > this.defaultMQPushConsumer.getPullThresholdSizeForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
@@ -331,6 +330,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                                 pullRequest.getMessageQueue().getTopic(), pullRT);
 
                             long firstMsgOffset = Long.MAX_VALUE;
+                            // 如果 msgFoundList为空， 则立即将 PullReqeuest放入到PullMessageService的pullRequestQueue，
+                            // 以便PullMessageSerivce能及时唤醒并再次执行消息拉取。
+                            // 为什么 PullStatus.FOUND,msgFoundList还会为空呢?因为 在 RocketMQ 根据 TAG 消息过滤，
+                            // 在服务端只是验证了 TAG 的 hashcode，在客户端再次 对消息进行过滤 ， 故可能会出现 msgFoundList 为空的情况
                             if (pullResult.getMsgFoundList() == null || pullResult.getMsgFoundList().isEmpty()) {
                                 DefaultMQPushConsumerImpl.this.executePullRequestImmediately(pullRequest);
                             } else {
@@ -338,15 +341,18 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                                 DefaultMQPushConsumerImpl.this.getConsumerStatsManager().incPullTPS(pullRequest.getConsumerGroup(),
                                     pullRequest.getMessageQueue().getTopic(), pullResult.getMsgFoundList().size());
-
+                                // 将消息放入ProcessQueue
                                 boolean dispatchToConsume = processQueue.putMessage(pullResult.getMsgFoundList());
-                                // 提交消费请求
+                                // 提交消费请求，这是一个异步消息
                                 DefaultMQPushConsumerImpl.this.consumeMessageService.submitConsumeRequest(
                                     pullResult.getMsgFoundList(),
                                     processQueue,
                                     pullRequest.getMessageQueue(),
                                     dispatchToConsume);
 
+                                // 将消息提交给消费者线程之后 PullCallBack将立即返回，可以说本次消息拉取 顺利完成，然后根据 pullinterval 参 数，
+                                // 如果 pulllnterval>O，则等待 pulllnterval 毫秒后将 PullRequest对象放入到 PullMessageService 的 pullRequestQueue 中 ，
+                                // 该消息队列的下次拉 取即将被激活，达到持续消息拉取，实现准实时拉取消息的效果
                                 if (DefaultMQPushConsumerImpl.this.defaultMQPushConsumer.getPullInterval() > 0) {
                                     DefaultMQPushConsumerImpl.this.executePullRequestLater(pullRequest,
                                         DefaultMQPushConsumerImpl.this.defaultMQPushConsumer.getPullInterval());
@@ -365,14 +371,14 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                             }
 
                             break;
-                        case NO_NEW_MSG:
+                        case NO_NEW_MSG: // 没有消息，则直 接使用服务器端校正的偏移量进行下一次消息的拉取 。
                             pullRequest.setNextOffset(pullResult.getNextBeginOffset());
 
                             DefaultMQPushConsumerImpl.this.correctTagsOffset(pullRequest);
 
                             DefaultMQPushConsumerImpl.this.executePullRequestImmediately(pullRequest);
                             break;
-                        case NO_MATCHED_MSG:
+                        case NO_MATCHED_MSG: // 没有匹配到消息，则直 接使用服务器端校正的偏移量进行下一次消息的拉取 。
                             pullRequest.setNextOffset(pullResult.getNextBeginOffset());
 
                             DefaultMQPushConsumerImpl.this.correctTagsOffset(pullRequest);
@@ -384,17 +390,19 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                                 pullRequest.toString(), pullResult.toString());
                             pullRequest.setNextOffset(pullResult.getNextBeginOffset());
 
+                            // 丢弃该队列
                             pullRequest.getProcessQueue().setDropped(true);
                             DefaultMQPushConsumerImpl.this.executeTaskLater(new Runnable() {
 
                                 @Override
                                 public void run() {
                                     try {
+                                        // 更新消费进度
                                         DefaultMQPushConsumerImpl.this.offsetStore.updateOffset(pullRequest.getMessageQueue(),
                                             pullRequest.getNextOffset(), false);
-
+                                        // 持久化消费进度
                                         DefaultMQPushConsumerImpl.this.offsetStore.persist(pullRequest.getMessageQueue());
-
+                                        // 将队列从rebalance的处理队列中移除
                                         DefaultMQPushConsumerImpl.this.rebalanceImpl.removeProcessQueue(pullRequest.getMessageQueue());
 
                                         log.warn("fix the pull request offset, {}", pullRequest);
