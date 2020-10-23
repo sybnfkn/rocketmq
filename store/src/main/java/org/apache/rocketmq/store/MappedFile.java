@@ -66,7 +66,7 @@ public class MappedFile extends ReferenceResource {
     /**
      * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
      */
-    // 堆内存 ByteBuffer， 如果 不为空，数 据 首 先将存储在 该
+    // 堆外 内存 ByteBuffer， 如果 不为空，数 据 首 先将存储在 该
     //Buffer中， 然后提交到MappedFile对应的内存映射文件Buffer。 transientStorePoolEnable 为 true时不为空。
     protected ByteBuffer writeBuffer = null;
     // 堆内存池， transientStorePoolEnable 为 true 时启用 。

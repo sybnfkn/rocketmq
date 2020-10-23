@@ -25,10 +25,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.rocketmq.client.common.ThreadLocalIndex;
 
 public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> {
+    /**
+     * key：broker
+     */
     private final ConcurrentHashMap<String, FaultItem> faultItemTable = new ConcurrentHashMap<String, FaultItem>(16);
 
     private final ThreadLocalIndex whichItemWorst = new ThreadLocalIndex();
 
+    /**
+     * @param name broker
+     * @param currentLatency 发送延时多久
+     * @param notAvailableDuration 隔离多久
+     */
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
 
@@ -38,7 +46,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
-
+            // 并发的控制吧
             old = this.faultItemTable.putIfAbsent(name, faultItem);
             if (old != null) {
 
@@ -51,6 +59,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
     }
+
 
     @Override
     public boolean isAvailable(final String name) {
@@ -66,7 +75,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         this.faultItemTable.remove(name);
     }
 
-    @Override
+    @Override // 至少选一个
     public String pickOneAtLeast() {
         final Enumeration<FaultItem> elements = this.faultItemTable.elements();
         List<FaultItem> tmpList = new LinkedList<FaultItem>();
@@ -84,6 +93,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             if (half <= 0) {
                 return tmpList.get(0).getName();
             } else {
+                // "哪个最差" 规避最差的
                 final int i = this.whichItemWorst.getAndIncrement() % half;
                 return tmpList.get(i).getName();
             }
@@ -102,7 +112,9 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     class FaultItem implements Comparable<FaultItem> {
         private final String name;
+        // 当前发消息延时
         private volatile long currentLatency;
+        // 什么时候才可以开始用
         private volatile long startTimestamp;
 
         public FaultItem(final String name) {

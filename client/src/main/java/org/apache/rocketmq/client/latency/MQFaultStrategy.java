@@ -29,6 +29,7 @@ public class MQFaultStrategy {
     private boolean sendLatencyFaultEnable = false;
 
     private long[] latencyMax = {50L, 100L, 550L, 1000L, 2000L, 3000L, 15000L};
+
     private long[] notAvailableDuration = {0L, 0L, 30000L, 60000L, 120000L, 180000L, 600000L};
 
     public long[] getNotAvailableDuration() {
@@ -68,6 +69,7 @@ public class MQFaultStrategy {
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
                     // broker是否可用
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
+                        // 之前没写过消息，或者最近写的broker等于当前broker
                         if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
                             return mq;
                     }
@@ -84,7 +86,7 @@ public class MQFaultStrategy {
                     }
                     return mq;
                 } else {
-                    // 移除，broker重新进行路由计算
+                    // 移除，broker重新进行路由计算，可能broker已经不存在了？
                     latencyFaultTolerance.remove(notBestBroker);
                 }
             } catch (Exception e) {
@@ -107,6 +109,8 @@ public class MQFaultStrategy {
             // 计算本次消息发送故障将broker规避的时长
             // 接下来多久broke不参与消息发送队列负载
             long duration = computeNotAvailableDuration(isolation ? 30000 : currentLatency);
+            // currentLatency当前延迟
+            // duration隔离多久
             this.latencyFaultTolerance.updateFaultItem(brokerName, currentLatency, duration);
         }
     }
