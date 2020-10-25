@@ -137,6 +137,7 @@ public class IndexFile {
                 this.mappedByteBuffer.putInt(absIndexPos, keyHash);
                 this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);
+                // 存放哈希槽之前的值，也就是上一个key的index位置
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8 + 4, slotValue);
 
                 // 将当前index包含条目数存储hash槽中,覆盖原来的hash槽的值
@@ -213,7 +214,7 @@ public class IndexFile {
                     // fileLock = this.fileChannel.lock(absSlotPos,
                     // hashSlotSize, true);
                 }
-
+                // 根据hash key 的hashcode 获取槽的值
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
                 // if (fileLock != null) {
                 // fileLock.release();
@@ -223,11 +224,12 @@ public class IndexFile {
                 if (slotValue <= invalidIndex || slotValue > this.indexHeader.getIndexCount()
                     || this.indexHeader.getIndexCount() <= 1) {
                 } else {
+                    // 开始遍历查找，因为设计hash冲突
                     for (int nextIndexToRead = slotValue; ; ) {
                         if (phyOffsets.size() >= maxNum) {
                             break;
                         }
-
+                        // 获取到index的位置
                         int absIndexPos =
                             IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize
                                 + nextIndexToRead * indexSize;
@@ -245,12 +247,14 @@ public class IndexFile {
                         timeDiff *= 1000L;
 
                         long timeRead = this.indexHeader.getBeginTimestamp() + timeDiff;
+                        // 如果 hashcode匹配并且 消息存储时间介 于待查找时间 start、 end之间则将消息物理偏移量加入到 phyOffsets
                         boolean timeMatched = (timeRead >= begin) && (timeRead <= end);
-
+                        // 必须校验hashcode是否一致，因为索引位置是hashcode % count
                         if (keyHash == keyHashRead && timeMatched) {
+                            // 将查到的物理地址都放到这里
                             phyOffsets.add(phyOffsetRead);
                         }
-
+                        // 找到极限位置，就退出吧
                         if (prevIndexRead <= invalidIndex
                             || prevIndexRead > this.indexHeader.getIndexCount()
                             || prevIndexRead == nextIndexToRead || timeRead < begin) {

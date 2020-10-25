@@ -55,7 +55,8 @@ public class MappedFile extends ReferenceResource {
     //写指针)。
     protected final AtomicInteger wrotePosition = new AtomicInteger(0);
     // 当前文件的提交指针，如果开启 transientStore­
-    //PoolEnable， 则数据会存储在 TransientStorePool 中， 然后提交到内存映射 ByteBuffer 中， 再 刷写到磁盘。当前文件的提交指针，如果开启 transientStore­
+    //PoolEnable， 则数据会存储在 TransientStorePool 中， 然后提交到内存映射 ByteBuffer 中，
+    // 再 刷写到磁盘。
     protected final AtomicInteger committedPosition = new AtomicInteger(0);
     // 刷写到磁盘指针，该指针之前的数据持久化到磁盘中
     private final AtomicInteger flushedPosition = new AtomicInteger(0);
@@ -235,6 +236,8 @@ public class MappedFile extends ReferenceResource {
         int currentPos = this.wrotePosition.get();
 
         if (currentPos < this.fileSize) {
+            // mappedByteBuffer基于mmap的直接内存
+            // writeBuffer临时的直接内存
             ByteBuffer byteBuffer = writeBuffer != null ? writeBuffer.slice() : this.mappedByteBuffer.slice();
             // 设置position为当前指针
             byteBuffer.position(currentPos);
@@ -428,6 +431,7 @@ public class MappedFile extends ReferenceResource {
         }
 
         if (commitLeastPages > 0) {
+            // 当前脏页是否大于等于最小提交的页数
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= commitLeastPages;
         }
 

@@ -1015,6 +1015,7 @@ public class CommitLog {
         // 异步刷盘
         else {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
+                // 不可用
                 flushCommitLogService.wakeup();
             } else {
                 commitLogService.wakeup();
@@ -1290,14 +1291,20 @@ public class CommitLog {
         public void run() {
             CommitLog.log.info(this.getServiceName() + " service started");
             while (!this.isStopped()) {
+                 // CommitRea!TimeService 线程间隔时间，默认 200ms。
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitIntervalCommitLog();
 
+                // 一次提交任务至少包含页数， 如果待提交数据不足，
+                //小于该参数配置的值，将忽略本次提交任务，默认 4 页 。
                 int commitDataLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogLeastPages();
 
+                // 两次真实提交最大间隔，默认 200ms
                 int commitDataThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogThoroughInterval();
 
                 long begin = System.currentTimeMillis();
+                // 如果距上次提交间隔超过 commitDataThoroughlnterval， 则本次提交忽略 commit­
+                //CommitLogLeastPages 参数， 也就是如果待提交数据小于指定页数， 也执行提交操作 。
                 if (begin >= (this.lastCommitTimestamp + commitDataThoroughInterval)) {
                     this.lastCommitTimestamp = begin;
                     commitDataLeastPages = 0;
@@ -1412,6 +1419,7 @@ public class CommitLog {
     }
 
     public static class GroupCommitRequest {
+        // 刷盘点偏移量
         private final long nextOffset;
         private CompletableFuture<PutMessageStatus> flushOKFuture = new CompletableFuture<>();
         private final long startTimestamp = System.currentTimeMillis();
@@ -1452,9 +1460,11 @@ public class CommitLog {
         private volatile List<GroupCommitRequest> requestsRead = new ArrayList<GroupCommitRequest>();
 
         public synchronized void putRequest(final GroupCommitRequest request) {
+            // 写并发安全，同一瞬间可能写入很多请求
             synchronized (this.requestsWrite) {
                 this.requestsWrite.add(request);
             }
+            // 一个请求线程唤醒就行
             if (hasNotified.compareAndSet(false, true)) {
                 waitPoint.countDown(); // notify
             }
@@ -1474,6 +1484,7 @@ public class CommitLog {
                         // two times the flush
                         boolean flushOK = false;
                         for (int i = 0; i < 2 && !flushOK; i++) {
+                            // 如果已刷盘指针大于等于提交的刷盘 点，表示刷盘成功
                             flushOK = CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset();
 
                             if (!flushOK) {
@@ -1504,6 +1515,7 @@ public class CommitLog {
 
             while (!this.isStopped()) {
                 try {
+                    // 即用sleep又用wait，即对cpu友好，又保证时效性
                     this.waitForRunning(10);
                     this.doCommit();
                 } catch (Exception e) {
@@ -1519,6 +1531,7 @@ public class CommitLog {
                 CommitLog.log.warn("GroupCommitService Exception, ", e);
             }
 
+            // 线程结束时候，也要吧read队列清除完毕
             synchronized (this) {
                 this.swapRequests();
             }
