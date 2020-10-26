@@ -62,19 +62,25 @@ public class MQFaultStrategy {
         if (this.sendLatencyFaultEnable) {
             try {
                 int index = tpInfo.getSendWhichQueue().getAndIncrement();
+
+                /**
+                 * 这个功能就是尝试，看下上次失败的队列在这次选择的时候，是不是可以用了，如果可以用了直接返回
+                 */
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
                     if (pos < 0)
                         pos = 0;
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
-                    // broker是否可用
+                    // broker是否可用（如果）
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
-                        // 之前没写过消息，或者最近写的broker等于当前broker
+                        // 当前brokerName的上一次发送的队列失败了，可能下个队列会成功，加上当前延迟容错机制下的确保可用情况下，选择另外的队列。
                         if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
                             return mq;
                     }
                 }
-
+                /**
+                 * 如果进入这一步：延迟容错机制觉得lastBrokerName这个broker不可用
+                 */
                 // 尝试从规避broker选择一个可用broker
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
@@ -85,7 +91,7 @@ public class MQFaultStrategy {
                         mq.setQueueId(tpInfo.getSendWhichQueue().getAndIncrement() % writeQueueNums);
                     }
                     return mq;
-                } else {
+                } else { // <= 0
                     // 移除，broker重新进行路由计算，可能broker已经不存在了？
                     latencyFaultTolerance.remove(notBestBroker);
                 }

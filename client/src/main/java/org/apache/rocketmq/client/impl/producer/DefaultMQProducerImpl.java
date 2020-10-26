@@ -721,7 +721,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
             return topicPublishInfo;
         } else {
-            // 如果路由信息未找到，尝试默认主题
+            // 如果路由信息未找到（），尝试默认主题，发送默认主题（broker未来会根据发送的topic，自动在ns上创建新的topic）
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
             return topicPublishInfo;
