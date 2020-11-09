@@ -862,7 +862,7 @@ public class CommitLog {
             msg.setStoreTimestamp(beginLockTimestamp);
 
             /**
-             * 如果 mappedFile 为空，表明$ {ROCKET_HOME}/store/ cornrnitlog 目录下不存在任何文件，
+             * 如果 mappedFile 为空，表明$ {ROCKET_HOME}/store/ commitlog 目录下不存在任何文件，
              * 说明本次消息是第一次消息发送，用偏移量 0创建第 一个 commit 文件，文件为 00000000000000000000，
              * 如果文件创建失败，抛出 CREATE MAPEDFILE FAILED，很有可能是磁盘空间不足或权限不够。
              */
@@ -1665,6 +1665,7 @@ public class CommitLog {
             }
 
             /**
+             * ***********剩余空间不足存放一个完整消息体
              * 如果消息长度+END_FILE_MIN_BLANK_LENGTH 大于 CommitLog文件 的空闲空间，
              * 则返回 AppendMessageStatus.END_OF_FILE, Broker会重新创建一个新的 CommitLog文件来存储该消息。
              * 从这里可以看出，每个 CommitLog文件最少会空闲 8个字 节，高 4 字节存储当前文件剩余空间，

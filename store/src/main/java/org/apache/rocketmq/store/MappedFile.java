@@ -54,8 +54,8 @@ public class MappedFile extends ReferenceResource {
     // 当前该文件的写指针，从 0开始(内存映射文件中的
     //写指针)。
     protected final AtomicInteger wrotePosition = new AtomicInteger(0);
-    // 当前文件的提交指针，如果开启 transientStore­
-    //PoolEnable， 则数据会存储在 TransientStorePool 中， 然后提交到内存映射 ByteBuffer 中，
+    // 当前文件的提交指针，如果开启 transientStore­PoolEnable，
+    //则数据会存储在 TransientStorePool 中， 然后提交到内存映射 ByteBuffer 中，
     // 再 刷写到磁盘。
     protected final AtomicInteger committedPosition = new AtomicInteger(0);
     // 刷写到磁盘指针，该指针之前的数据持久化到磁盘中
@@ -67,7 +67,7 @@ public class MappedFile extends ReferenceResource {
     /**
      * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
      */
-    // 堆外 内存 ByteBuffer， 如果 不为空，数 据 首 先将存储在 该
+    // 堆外 内存 ByteBuffer， 如果不为空，数据首先将存储在 该
     //Buffer中， 然后提交到MappedFile对应的内存映射文件Buffer。 transientStorePoolEnable 为 true时不为空。
     protected ByteBuffer writeBuffer = null;
     // 堆内存池， transientStorePoolEnable 为 true 时启用 。
