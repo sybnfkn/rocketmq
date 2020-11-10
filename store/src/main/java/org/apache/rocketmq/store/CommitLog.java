@@ -719,8 +719,9 @@ public class CommitLog {
                 beginTimeInLock = 0;
                 return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null));
             }
-
+            // *************
             result = mappedFile.appendMessages(messageExtBatch, this.appendMessageCallback);
+
             switch (result.getStatus()) {
                 case PUT_OK:
                     break;
@@ -1291,7 +1292,7 @@ public class CommitLog {
         public void run() {
             CommitLog.log.info(this.getServiceName() + " service started");
             while (!this.isStopped()) {
-                 // CommitRea!TimeService 线程间隔时间，默认 200ms。
+                 // CommitRealTimeService 线程间隔时间，默认 200ms。
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitIntervalCommitLog();
 
                 // 一次提交任务至少包含页数， 如果待提交数据不足，
@@ -1305,6 +1306,7 @@ public class CommitLog {
                 long begin = System.currentTimeMillis();
                 // 如果距上次提交间隔超过 commitDataThoroughlnterval， 则本次提交忽略 commit­
                 //CommitLogLeastPages 参数， 也就是如果待提交数据小于指定页数， 也执行提交操作 。
+                // 如果间隔时间太长，commitDataLeastPages = 0;// 只要有脏页就提交
                 if (begin >= (this.lastCommitTimestamp + commitDataThoroughInterval)) {
                     this.lastCommitTimestamp = begin;
                     commitDataLeastPages = 0;
@@ -1347,9 +1349,12 @@ public class CommitLog {
             while (!this.isStopped()) {
                 boolean flushCommitLogTimed = CommitLog.this.defaultMessageStore.getMessageStoreConfig().isFlushCommitLogTimed();
 
+                // FlushRealTimeService 线程任务运行间隔
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushIntervalCommitLog();
+                // 一次刷写任务至少包含页数， 如 果待 刷 写数据不足， 小于该参数配置的值，将忽略本次刷写任务，默认 4页
                 int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
 
+                // 两次真实刷写任务最大间隔， 默认 10s
                 int flushPhysicQueueThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogThoroughInterval();
 
@@ -1357,6 +1362,8 @@ public class CommitLog {
 
                 // Print flush progress
                 long currentTimeMillis = System.currentTimeMillis();
+                // 如果距上次提交间隔超过 flushPhysicQueueThoroughinterval，则本次刷盘任务 将忽略flushPhysicQueueLeastPages，
+                // 也就是如果待刷写数据小于指定页数也执行刷写磁盘 操作。
                 if (currentTimeMillis >= (this.lastFlushTimestamp + flushPhysicQueueThoroughInterval)) {
                     this.lastFlushTimestamp = currentTimeMillis;
                     flushPhysicQueueLeastPages = 0;
@@ -1736,6 +1743,7 @@ public class CommitLog {
             // 这里只 是将消息存储在 MappedFile对应的内存映射 Buffer中，并没有刷写到磁盘，
             byteBuffer.put(this.msgStoreItemMemory.array(), 0, msgLen);
 
+            // 封装返回结果
             AppendMessageResult result = new AppendMessageResult(AppendMessageStatus.PUT_OK, wroteOffset, msgLen, msgId,
                 msgInner.getStoreTimestamp(), queueOffset, CommitLog.this.defaultMessageStore.now() - beginTimeMills);
 

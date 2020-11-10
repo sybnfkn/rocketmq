@@ -1935,7 +1935,7 @@ public class DefaultMessageStore implements MessageStore {
             if (this.reputFromOffset < DefaultMessageStore.this.commitLog.getMinOffset()) {
                 log.warn("The reputFromOffset={} is smaller than minPyOffset={}, this usually indicate that the dispatch behind too much and the commitlog has expired.",
                     this.reputFromOffset, DefaultMessageStore.this.commitLog.getMinOffset());
-                // 该参数的含义是 ReputMessageService从哪个物理偏移量开始转发消息 给 ConsumeQueu巳和 IndexFile。
+                // 该参数的含义是 ReputMessageService从哪个物理偏移量开始转发消息给 ConsumeQueue 和 IndexFile。
                 // 如果允许重复转发， reputFromOffset设置为 CommitLog的 提交指针;如果不允许重复转发， reputFromOffset设置为 Commitlog 的内存中最大偏移量
                 this.reputFromOffset = DefaultMessageStore.this.commitLog.getMinOffset();
             }
