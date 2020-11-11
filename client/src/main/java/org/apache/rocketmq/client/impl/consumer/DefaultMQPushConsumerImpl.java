@@ -96,6 +96,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private static final long CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND = 1000 * 30;
     private final InternalLogger log = ClientLogger.getLog();
     private final DefaultMQPushConsumer defaultMQPushConsumer;
+    // rebalance处理 ，一个group下，有多个topic，每个topic都会进行rebalance
     private final RebalanceImpl rebalanceImpl = new RebalancePushImpl(this);
     private final ArrayList<FilterMessageHook> filterMessageHookList = new ArrayList<FilterMessageHook>();
     private final long consumerStartTimestamp = System.currentTimeMillis();
@@ -106,8 +107,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private PullAPIWrapper pullAPIWrapper;
     private volatile boolean pause = false;
     private boolean consumeOrderly = false;
+    // 消息的监听器
     private MessageListener messageListenerInner;
+    // 记录这个消费组所有对应队列的偏移量，特殊：一个group下可能会有多个topic，每个topic下的队列都会记录
     private OffsetStore offsetStore;
+    // 消息消费服务
     private ConsumeMessageService consumeMessageService;
     private long queueFlowControlTimes = 0;
     private long queueMaxSpanFlowControlTimes = 0;

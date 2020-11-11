@@ -395,6 +395,7 @@ public class ConsumeQueue {
                         topic, queueId, request.getCommitLogOffset());
                 }
             }
+            // commitLogOffset 8字节，size 4字节，tagCode 8字节，为consumeQueue中的元素
             boolean result = this.putMessagePositionInfo(request.getCommitLogOffset(),
                 request.getMsgSize(), tagsCode, request.getConsumeQueueOffset());
             if (result) {
@@ -438,6 +439,7 @@ public class ConsumeQueue {
 
         final long expectLogicOffset = cqOffset * CQ_STORE_UNIT_SIZE;
 
+        // 根据逻辑位置计算出对应的mappedFile
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile(expectLogicOffset);
         if (mappedFile != null) {
 
@@ -471,6 +473,7 @@ public class ConsumeQueue {
                 }
             }
             this.maxPhysicOffset = offset + size;
+            // 将消息进行保存
             return mappedFile.appendMessage(this.byteBufferIndex.array());
         }
         return false;

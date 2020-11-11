@@ -1946,11 +1946,12 @@ public class DefaultMessageStore implements MessageStore {
                     break;
                 }
 
+                // 返回 reputFromOffset偏移量开始的全部有效数据(commitlog文件)。 然后循环 读取每一条消息
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
                 if (result != null) {
                     try {
                         this.reputFromOffset = result.getStartOffset();
-
+                        // 循环
                         for (int readSize = 0; readSize < result.getSize() && doNext; ) {
                             DispatchRequest dispatchRequest =
                                 DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), false, false);
@@ -1959,8 +1960,12 @@ public class DefaultMessageStore implements MessageStore {
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
                                     // 构建consumeQueue和index
+                                    // 从 result返回的 ByteBuffer 中循环读取消息，一次读取一条，创建 Dispatch­ Request对象。
+                                    // 如果消息长度大于 0，则调用 doDispatch 方法 。
+                                    // 最终将分 别调用 CommitLogDispatcherBuildConsumeQueue (构建消息消费队 列 )、 CommitLogDispatcherBuildlndex (构建索引文件)
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
+                                    // master节点&支持长轮训
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
                                         && DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {
                                         // 唤醒consumer请求操作，弥补每5s慢的延时
