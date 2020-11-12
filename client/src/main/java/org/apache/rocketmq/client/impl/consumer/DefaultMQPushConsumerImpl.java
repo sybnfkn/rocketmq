@@ -249,7 +249,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
          * 进行消息拉取流控 。 从消息消费数量与消费间隔两个维度进行控制 。
          */
         // 消息处理总数，如果 ProcessQueue 当前处理的消息条数超过了 pullThresholdFor­ Queue=lOOO将触发流控，放弃本次拉取任务，并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
-        // p u l l R e q u e s t = {拉取任务} , f l o w C o n t r o l T i m e s = {流控触发次数} 。
+        // pul l R e q u e s t = {拉取任务} , f l o w C o n t r o l T i m e s = {流控触发次数} 。
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {

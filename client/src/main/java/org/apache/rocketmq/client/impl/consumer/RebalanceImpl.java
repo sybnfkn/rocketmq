@@ -287,6 +287,7 @@ public abstract class RebalanceImpl {
 
                     List<MessageQueue> allocateResult = null;
                     try {
+                        // 给本机分配的MessageQueue
                         allocateResult = strategy.allocate(
                             this.consumerGroup,
                             this.mQClientFactory.getClientId(), // 当前的消费者id
@@ -348,21 +349,24 @@ public abstract class RebalanceImpl {
      * @param isOrder
      * @return
      */
-    private boolean updateProcessQueueTableInRebalance(final String topic, final Set<MessageQueue> mqSet,
+    private boolean updateProcessQueueTableInRebalance(final String topic, final Set<MessageQueue> mqSet, // 新的列表
         final boolean isOrder) {
         boolean changed = false;
-        // 当前消费者负载的消息队列缓存表
+        // 当前消费者负载的消息队列缓存表，老的列表
         Iterator<Entry<MessageQueue, ProcessQueue>> it = this.processQueueTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<MessageQueue, ProcessQueue> next = it.next();
             MessageQueue mq = next.getKey();
             ProcessQueue pq = next.getValue();
 
-            if (mq.getTopic().equals(topic)) {
+            /**
+             * 1。先修复以前旧的队列信息
+             */
+            if (mq.getTopic().equals(topic)) { // 只处理topic匹配的
                 // 如果缓存表中MessageQueue不包含在mqSet中
                 // 说明经过本次消息负载后，mq被分配给其他消费者了，需要暂停消息队列的消息消费
                 // 将processQueue状态droped=true，该processorQueue消息将不会再被消费
-                if (!mqSet.contains(mq)) {
+                if (!mqSet.contains(mq)) { // 老的队列不在新的队列里面，说明已经被分配到其他机器了
                     // 设置不被消费
                     pq.setDropped(true);
                     // 是否将MessageQueue，ProcessQueue从缓存表中移除
@@ -392,6 +396,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 在对新的队列进行处理
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             // 如果不包含，说明本次新增加的消息队列，从内存中移除该消息队列饿的消费进度

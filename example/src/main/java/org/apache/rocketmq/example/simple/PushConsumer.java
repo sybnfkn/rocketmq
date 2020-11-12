@@ -55,9 +55,6 @@ public class PushConsumer {
         consumerB.start();
 
 
-        System.out.println("--------------");
-
-
 
     }
 }
