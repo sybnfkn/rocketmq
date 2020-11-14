@@ -111,7 +111,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private MessageListener messageListenerInner;
     // 记录这个消费组所有对应队列的偏移量，特殊：一个group下可能会有多个topic，每个topic下的队列都会记录
     private OffsetStore offsetStore;
-    // 消息消费服务
+    // 消息消费服务 消费COnsumeRequets
     private ConsumeMessageService consumeMessageService;
     private long queueFlowControlTimes = 0;
     private long queueMaxSpanFlowControlTimes = 0;
@@ -249,7 +249,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
          * 进行消息拉取流控 。 从消息消费数量与消费间隔两个维度进行控制 。
          */
         // 消息处理总数，如果 ProcessQueue 当前处理的消息条数超过了 pullThresholdFor­ Queue=lOOO将触发流控，放弃本次拉取任务，并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
-        // pul l R e q u e s t = {拉取任务} , f l o w C o n t r o l T i m e s = {流控触发次数} 。
+        // pullRequest = {拉取任务} , flowControlTimes = {流控触发次数} 。
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
@@ -361,6 +361,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                                     DefaultMQPushConsumerImpl.this.executePullRequestLater(pullRequest,
                                         DefaultMQPushConsumerImpl.this.defaultMQPushConsumer.getPullInterval());
                                 } else {
+                                    // 立即将PullRequest放入，然后立马执行消息获取
                                     DefaultMQPushConsumerImpl.this.executePullRequestImmediately(pullRequest);
                                 }
                             }
