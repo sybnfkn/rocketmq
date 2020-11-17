@@ -30,8 +30,6 @@ public class PushConsumer {
     public static void main(String[] args) throws InterruptedException, MQClientException {
         DefaultMQPushConsumer consumerA = new DefaultMQPushConsumer("groupA");
         consumerA.subscribe("TopicA", "*");
-        consumerA.subscribe("TopicAA", "*");
-
         consumerA.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
         consumerA.registerMessageListener(new MessageListenerConcurrently() {
             @Override
@@ -40,6 +38,7 @@ public class PushConsumer {
             }
         });
         consumerA.start();
+        consumerA.subscribe("TopicAA", "*");
 
         DefaultMQPushConsumer consumerB = new DefaultMQPushConsumer("groupB");
         consumerB.subscribe("TopicB", "*");
