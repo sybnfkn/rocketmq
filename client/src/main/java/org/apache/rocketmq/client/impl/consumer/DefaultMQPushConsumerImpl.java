@@ -648,6 +648,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 }
                 this.offsetStore.load();
 
+                /**
+                 * 根据监听类，决定consumeMessageService实现类是并发消费还是顺序消费
+                 */
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
                     // 根据是否是顺序消费，创建消费端消费线程服务 。 ConsumeMessageService 主 要 负责消息消费，内部维护一个线程池 。
                     this.consumeOrderly = true;

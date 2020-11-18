@@ -102,6 +102,7 @@ public class RebalanceLockManager {
         if (groupValue != null) {
             LockEntry lockEntry = groupValue.get(mq);
             if (lockEntry != null) {
+                // 这个客户端是不是锁着
                 boolean locked = lockEntry.isLocked(clientId);
                 if (locked) {
                     lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());

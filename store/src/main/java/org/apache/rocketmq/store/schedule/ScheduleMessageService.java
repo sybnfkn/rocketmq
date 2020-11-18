@@ -307,6 +307,7 @@ public class ScheduleMessageService extends ConfigManager {
 
                             // 定时消息到期
                             if (countdown <= 0) {
+                                // 获取到消息实体，然后重新封装放到真正的topic中
                                 MessageExt msgExt =
                                     ScheduleMessageService.this.defaultMessageStore.lookMessageByOffset(
                                         offsetPy, sizePy);

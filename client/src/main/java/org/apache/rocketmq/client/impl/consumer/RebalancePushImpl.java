@@ -87,6 +87,7 @@ public class RebalancePushImpl extends RebalanceImpl {
         this.defaultMQPushConsumerImpl.getOffsetStore().persist(mq);
         // 从本地缓存中移除mq
         this.defaultMQPushConsumerImpl.getOffsetStore().removeOffset(mq);
+        // 如果是顺序消费，需要以oneway方式解了队列的锁
         if (this.defaultMQPushConsumerImpl.isConsumeOrderly()
             && MessageModel.CLUSTERING.equals(this.defaultMQPushConsumerImpl.messageModel())) {
             try {
@@ -114,6 +115,7 @@ public class RebalancePushImpl extends RebalanceImpl {
 
     private boolean unlockDelay(final MessageQueue mq, final ProcessQueue pq) {
 
+        // 队列还不是空的
         if (pq.hasTempMessage()) {
             log.info("[{}]unlockDelay, begin {} ", mq.hashCode(), mq);
             this.defaultMQPushConsumerImpl.getmQClientFactory().getScheduledExecutorService().schedule(new Runnable() {

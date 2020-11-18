@@ -217,6 +217,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             public void run() {
                 boolean lockOK = ConsumeMessageOrderlyService.this.lockOneMQ(mq);
                 if (lockOK) {
+                    // 获取到锁，重新消费
                     ConsumeMessageOrderlyService.this.submitConsumeRequestLater(processQueue, mq, 10);
                 } else {
                     ConsumeMessageOrderlyService.this.submitConsumeRequestLater(processQueue, mq, 3000);
@@ -418,10 +419,14 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                 return;
             }
 
+            // 一个队列一把锁，保证单机情况串行消费
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
+            // 保证线性处理
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
+                        // 处理队列被锁，并且锁没有过期，保证多机之间因为rebalance原因不会重复消费，因为处于过度状态时，broker存放的锁信息是固定
                     || (this.processQueue.isLocked() && !this.processQueue.isLockExpired())) {
+
                     final long beginTime = System.currentTimeMillis();
                     for (boolean continueConsume = true; continueConsume; ) {
                         if (this.processQueue.isDropped()) {
@@ -477,6 +482,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                             ConsumeReturnType returnType = ConsumeReturnType.SUCCESS;
                             boolean hasException = false;
                             try {
+                                // 消费的锁
                                 this.processQueue.getLockConsume().lock();
                                 if (this.processQueue.isDropped()) {
                                     log.warn("consumeMessage, the message queue not be able to consume, because it's dropped. {}",
@@ -493,6 +499,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                                     messageQueue);
                                 hasException = true;
                             } finally {
+                                // 消费完毕解锁
                                 this.processQueue.getLockConsume().unlock();
                             }
 
@@ -549,6 +556,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                         return;
                     }
 
+                    // 重新去broker给加下锁，相当于：一段时间锁就会过期，需要重新去broker获取
                     ConsumeMessageOrderlyService.this.tryLockLaterAndReconsume(this.messageQueue, this.processQueue, 100);
                 }
             }

@@ -147,6 +147,7 @@ public abstract class RebalanceImpl {
                     ProcessQueue processQueue = this.processQueueTable.get(mmqq);
                     if (processQueue != null) {
                         processQueue.setLocked(true);
+                        // 存的是客户端的时间
                         processQueue.setLastLockTimestamp(System.currentTimeMillis());
                     }
                 }

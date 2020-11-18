@@ -27,6 +27,11 @@ public class MessageQueueLock {
     private ConcurrentMap<MessageQueue, Object> mqLockTable =
         new ConcurrentHashMap<MessageQueue, Object>();
 
+    /**
+     * 确保一个队列一把锁
+     * @param mq
+     * @return
+     */
     public Object fetchLockObject(final MessageQueue mq) {
         Object objLock = this.mqLockTable.get(mq);
         if (null == objLock) {

@@ -55,6 +55,7 @@ public class ProcessQueue {
     // ProcessQueue 中总消息数 。
     private final AtomicLong msgCount = new AtomicLong();
     private final AtomicLong msgSize = new AtomicLong();
+    // 消费锁
     private final Lock lockConsume = new ReentrantLock();
     /**
      * A subset of msgTreeMap, will only be used when orderly consume
@@ -72,12 +73,14 @@ public class ProcessQueue {
     private volatile long lastPullTimestamp = System.currentTimeMillis();
     // 上一次消息消费时间戳。
     private volatile long lastConsumeTimestamp = System.currentTimeMillis();
+    // 队列锁定之后设置为true
     private volatile boolean locked = false;
+    //
     private volatile long lastLockTimestamp = System.currentTimeMillis();
     private volatile boolean consuming = false;
     private volatile long msgAccCnt = 0;
 
-    // 判断锁是 否过期 ，锁超时 时间 默认为 30s。 可以通过系统参数 rocketmq.client.
+    // 判断锁是否过期 ，锁超时时间默认为30s。可以通过系统参数rocketmq.client.
     //rebalance.lockMaxLiveTime来设置。
     public boolean isLockExpired() {
         return (System.currentTimeMillis() - this.lastLockTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
