@@ -85,6 +85,14 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("ConsumeMessageScheduledThread_"));
     }
 
+    /**
+     * 默认每隔 20s 执行 一 次锁定分配给自 己的 消息消费队列 。
+     * 通过 -Drocketmq.client.rebalance.locklnterval=20000 设置间隔，该值建议与 一次消息负载频率设置相同 。
+     *
+     * 从上文可知，集群模式下顺序消息消费在创建拉取任务时并 未将 ProcessQu巳ue 的 locked状态设置为 true，
+     * 在未锁定消息队列之前无法执行消息拉取任 务， ConsumeM巳ssageOrderlyService 以每 20s 的频率对分配给自己的消息队列进行自动加 锁操作，
+     * 从而消费加锁成功的消息消费队列 。
+     */
     public void start() {
         if (MessageModel.CLUSTERING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())) {
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
@@ -420,11 +428,23 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             }
 
             // 一个队列一把锁，保证单机情况串行消费
+            /**
+             * 根据消息队列获取一个对象。 然后消息消费时先申请独占 objLock。
+             * 顺序消息 消费的并发度为消息队列。 也就是一个消息消费队列同一时刻只会被一个消费线程池中一 个线程消费。
+             */
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
             // 保证线性处理
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                         // 处理队列被锁，并且锁没有过期，保证多机之间因为rebalance原因不会重复消费，因为处于过度状态时，broker存放的锁信息是固定
+                        /**
+                         * 思考一 下，会不会出现当消息队列重新负载时，
+                         * 原先由自己处理的消息队列被另外一个消费者分 配，
+                         * 此时如果还未来得及将 ProceeQueue解除锁定，就被另外一个消费者添加进去，
+                         * 此时 会存储多个消息消费者同时消费一个消息队列?答案是不会的，因为当一个新的消费队列 分配给消费者时，
+                         * 在添加其拉取任务之前必须先向 Broker发送对该消息队列加锁请求，只 有加锁成功后，
+                         * 才能添加拉取消息，否则等到下一次负载后，只有消费队列被原先占有的 消费者释放后，才能开始新的拉取任务 。
+                         */
                     || (this.processQueue.isLocked() && !this.processQueue.isLockExpired())) {
 
                     final long beginTime = System.currentTimeMillis();

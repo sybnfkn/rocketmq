@@ -286,6 +286,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 return;
             }
         } else {
+            // 顺序消费
+            /**
+             * 如果消息处理队列未被锁定，则延迟 3s 后再将 PullRequest对象放入到拉取任务中，
+             * 如果该处理队列是第一次拉取任务 ，则首先计算拉取偏移量，然后 向消息服务端拉取消息 。
+             */
             if (processQueue.isLocked()) {
                 if (!pullRequest.isLockedFirst()) {
                     final long offset = this.rebalanceImpl.computePullFromWhere(pullRequest.getMessageQueue());
