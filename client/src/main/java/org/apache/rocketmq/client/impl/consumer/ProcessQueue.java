@@ -286,6 +286,13 @@ public class ProcessQueue {
     }
 
     // 将 msgTreeMapTmp 中的消息清除，表示成功处理该批消息
+
+    /**
+     * 就是将该批消息从 ProceeQu巳ue 中移除，
+     * 维护 msgCount (消息处理队列中消息 条数)并获取消息消费的偏移量 offset，然后将该批消息从 msgTreeMapTemp 中移除，
+     * 并 返回待保存的消息消费进度( offset+1)，从中可以看出 offset表示消息消费队列的逻辑偏移 量， 类似于数组的下标，代表第n个ConsumeQueue条目。
+     * @return
+     */
     public long commit() {
         try {
             this.lockTreeMap.writeLock().lockInterruptibly();
@@ -316,6 +323,7 @@ public class ProcessQueue {
             try {
                 for (MessageExt msg : msgs) {
                     this.consumingMsgOrderlyTreeMap.remove(msg.getQueueOffset());
+                    // 重新放入
                     this.msgTreeMap.put(msg.getQueueOffset(), msg);
                 }
             } finally {
