@@ -156,6 +156,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                     requestHeader.getTopic(), requestHeader.getSubscription(), requestHeader.getExpressionType()
                 );
                 if (!ExpressionType.isTagType(subscriptionData.getExpressionType())) {
+                    // 如果不是tag模式，构建过滤数据 ConsumeFiIterData。
                     consumerFilterData = ConsumerFilterManager.build(
                         requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getSubscription(),
                         requestHeader.getExpressionType(), requestHeader.getSubVersion()
@@ -226,6 +227,10 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
             return response;
         }
 
+        /**
+         * 构建消息过滤对象， ExpressionForRetryMessageFilte，支持对重试主题的过 滤，
+         * ExpressionMessageFilter，不支持对重试主题的属性过滤 ，也就是如果是 tag模式，执 行 isMatchedByCommitLog 方法将直接返回 true。
+         */
         MessageFilter messageFilter;
         if (this.brokerController.getBrokerConfig().isFilterSupportRetry()) {
             messageFilter = new ExpressionForRetryMessageFilter(subscriptionData, consumerFilterData,

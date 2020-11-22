@@ -78,6 +78,7 @@ public class ExpressionMessageFilter implements MessageFilter {
                 return true;
             }
 
+            // 包含tag的hashcode了，直接返回
             return subscriptionData.getCodeSet().contains(tagsCode.intValue());
         } else {
             // no expression or no bloom
@@ -124,6 +125,7 @@ public class ExpressionMessageFilter implements MessageFilter {
             return true;
         }
 
+        // 基于tag模式，直接返回true
         if (ExpressionType.isTagType(subscriptionData.getExpressionType())) {
             return true;
         }

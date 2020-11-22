@@ -66,6 +66,7 @@ public class FilterAPI {
 
     public static SubscriptionData build(final String topic, final String subString,
         final String type) throws Exception {
+        // TAG模式
         if (ExpressionType.TAG.equals(type) || type == null) {
             return buildSubscriptionData(null, topic, subString);
         }
