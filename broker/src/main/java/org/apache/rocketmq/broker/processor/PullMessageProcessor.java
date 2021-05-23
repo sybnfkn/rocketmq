@@ -233,17 +233,19 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
          */
         MessageFilter messageFilter;
         if (this.brokerController.getBrokerConfig().isFilterSupportRetry()) {
+            // ExpressionMessageFilter这是他的父类
             messageFilter = new ExpressionForRetryMessageFilter(subscriptionData, consumerFilterData,
                 this.brokerController.getConsumerFilterManager());
         } else {
+            // 应该是走这个   ExpressionMessageFilter，不支持对重试主题的属性过滤 ，也就是如果是 tag模式，执 行 isMatchedByCommitLog 方法将直接返回 true。
             messageFilter = new ExpressionMessageFilter(subscriptionData, consumerFilterData,
                 this.brokerController.getConsumerFilterManager());
         }
 
-        // 调用MessageStore。getMessage查找消息
+        // ***************** 调用MessageStore。getMessage查找消息
         final GetMessageResult getMessageResult =
             this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-                requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), messageFilter);
+                requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), messageFilter/*消息过滤*/);
 
         if (getMessageResult != null) {
             response.setRemark(getMessageResult.getStatus().name());

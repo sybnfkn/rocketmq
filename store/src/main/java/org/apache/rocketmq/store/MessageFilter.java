@@ -36,7 +36,8 @@ public interface MessageFilter {
      * {@code properties} is null;If invoked in {@code PullRequestHoldService}, {@code msgBuffer} is null.
      *
      * @param msgBuffer message buffer in commit log, may be null if not invoked in store. 消息内容
-     * @param properties message properties, should decode from buffer if null by yourself. 消息属性
+     * @param properties message properties, should decode from buffer if null by yourself. 消息属性，主要适用于SQL92过滤模式
+     *  根据存储在commitlog文件中内容判断消息是否匹配
      */
     boolean isMatchedByCommitLog(final ByteBuffer msgBuffer,
         final Map<String, String> properties);

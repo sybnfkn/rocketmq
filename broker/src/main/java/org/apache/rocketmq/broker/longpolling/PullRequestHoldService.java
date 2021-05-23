@@ -44,6 +44,7 @@ public class PullRequestHoldService extends ServiceThread {
     public void suspendPullRequest(final String topic, final int queueId, final PullRequest pullRequest) {
         // 通过主题和队列id做个key
         String key = this.buildKey(topic, queueId);
+        // 存储结构：ConcurrentMap<String/* topic@queueId */, ManyPullRequest>
         ManyPullRequest mpr = this.pullRequestTable.get(key);
         if (null == mpr) {
             mpr = new ManyPullRequest();
@@ -52,7 +53,8 @@ public class PullRequestHoldService extends ServiceThread {
                 mpr = prev;
             }
         }
-        // 将请求加进去
+        // 将请求加进去 ArrayList中
+        // ArrayList<PullRequest> pullRequestList = new ArrayList<>();
         mpr.addPullRequest(pullRequest);
     }
 
@@ -146,7 +148,7 @@ public class PullRequestHoldService extends ServiceThread {
                             match = request.getMessageFilter().isMatchedByCommitLog(null, properties);
                         }
 
-                        // 满足条件
+                        // 满足条件，重新构建拉取请求，放入PullMessageProcessor执行
                         if (match) {
                             try {
                                 this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),
@@ -158,6 +160,7 @@ public class PullRequestHoldService extends ServiceThread {
                         }
                     }
 
+                    // 长轮训默认30s
                     if (System.currentTimeMillis() >= (request.getSuspendTimestamp() + request.getTimeoutMillis())) {
                         try {
                             this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),
@@ -167,7 +170,7 @@ public class PullRequestHoldService extends ServiceThread {
                         }
                         continue;
                     }
-
+                    // 重新放入，等待下次条件满足
                     replayList.add(request);
                 }
 

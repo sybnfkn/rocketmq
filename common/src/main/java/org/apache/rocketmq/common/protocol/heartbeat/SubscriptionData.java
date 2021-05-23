@@ -41,7 +41,7 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
     // 消息过滤tag hashcode集合
     private Set<Integer> codeSet = new HashSet<Integer>();
     private long subVersion = System.currentTimeMillis();
-    // 消息过滤类型 tag或sql92
+    // 表达式的消息过滤类型 tag或sql92
     private String expressionType = ExpressionType.TAG;
 
     @JSONField(serialize = false)

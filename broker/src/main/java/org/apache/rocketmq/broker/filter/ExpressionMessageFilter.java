@@ -67,7 +67,7 @@ public class ExpressionMessageFilter implements MessageFilter {
             return true;
         }
 
-        // by tags code.
+        // by tags code.   tag过滤的模式
         if (ExpressionType.isTagType(subscriptionData.getExpressionType())) {
 
             if (tagsCode == null) {
