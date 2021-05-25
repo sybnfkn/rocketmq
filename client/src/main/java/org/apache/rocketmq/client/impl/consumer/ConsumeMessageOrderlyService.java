@@ -89,8 +89,8 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
      * 默认每隔 20s 执行 一 次锁定分配给自 己的 消息消费队列 。
      * 通过 -Drocketmq.client.rebalance.locklnterval=20000 设置间隔，该值建议与 一次消息负载频率设置相同 。
      *
-     * 从上文可知，集群模式下顺序消息消费在创建拉取任务时并 未将 ProcessQu巳ue 的 locked状态设置为 true，
-     * 在未锁定消息队列之前无法执行消息拉取任 务， ConsumeM巳ssageOrderlyService 以每 20s 的频率对分配给自己的消息队列进行自动加 锁操作，
+     * 从上文可知，集群模式下顺序消息消费在创建拉取任务时并未将ProcessQueue 的 locked状态设置为 true，
+     * 在未锁定消息队列之前无法执行消息拉取任务， ConsumeMessageOrderlyService 以每20s 的频率对分配给自己的消息队列进行自动加 锁操作，
      * 从而消费加锁成功的消息消费队列 。
      */
     public void start() {
@@ -98,6 +98,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
+                    // 定期锁定
                     ConsumeMessageOrderlyService.this.lockMQPeriodically();
                 }
             }, 1000 * 1, ProcessQueue.REBALANCE_LOCK_INTERVAL, TimeUnit.MILLISECONDS);
@@ -470,6 +471,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                         if (MessageModel.CLUSTERING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                             && !this.processQueue.isLocked()) {
                             log.warn("the message queue not locked, so consume later, {}", this.messageQueue);
+                            // 尝试锁定
                             ConsumeMessageOrderlyService.this.tryLockLaterAndReconsume(this.messageQueue, this.processQueue, 10);
                             break;
                         }
@@ -477,6 +479,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                         if (MessageModel.CLUSTERING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                             && this.processQueue.isLockExpired()) {
                             log.warn("the message queue lock expired, so consume later, {}", this.messageQueue);
+                            // 尝试锁定
                             ConsumeMessageOrderlyService.this.tryLockLaterAndReconsume(this.messageQueue, this.processQueue, 10);
                             break;
                         }

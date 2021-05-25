@@ -667,6 +667,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         new ConsumeMessageConcurrentlyService(this, (MessageListenerConcurrently) this.getMessageListenerInner());
                 }
 
+                // ************** 在顺序消息中会定时向broker发送锁定的请求，防止重分配后第一次锁定失败的情况
                 this.consumeMessageService.start();
 
                 // 将当前DefaultMqConsumerImpl注册到MQInstance对象中

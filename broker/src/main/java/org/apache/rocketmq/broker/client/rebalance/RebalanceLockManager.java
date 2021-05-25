@@ -105,6 +105,7 @@ public class RebalanceLockManager {
                 // 这个客户端是不是锁着
                 boolean locked = lockEntry.isLocked(clientId);
                 if (locked) {
+                    // 重置过期时间
                     lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());
                 }
 

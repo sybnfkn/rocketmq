@@ -184,7 +184,7 @@ public abstract class RebalanceImpl {
             if (mqs.isEmpty())
                 continue;
 
-            // 向 Broker ( Master 主节点)发送锁定消息队列， 该方法返回成功被 当前消 费者 锁定的消息消 费 队列 。
+            // 向Broker(Master 主节点)发送锁定消息队列， 该方法返回成功被当前消费者锁定的消息消费队列 。
             FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(brokerName, MixAll.MASTER_ID, true);
             if (findBrokerResult != null) {
                 LockBatchRequestBody requestBody = new LockBatchRequestBody();
@@ -193,6 +193,7 @@ public abstract class RebalanceImpl {
                 requestBody.setMqSet(mqs);
 
                 try {
+                    // 定时锁定
                     Set<MessageQueue> lockOKMQSet =
                         this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ(findBrokerResult.getBrokerAddr(), requestBody, 1000);
 
@@ -382,6 +383,7 @@ public abstract class RebalanceImpl {
                     pq.setDropped(true);
                     // 是否将MessageQueue，ProcessQueue从缓存表中移除
                     // 主要持久化待移除MessageQueue消息消费进度。
+                    // 在这里会进行解锁
                     if (this.removeUnnecessaryMessageQueue(mq, pq)) {
                         it.remove();
                         changed = true;
@@ -414,7 +416,7 @@ public abstract class RebalanceImpl {
             if (!this.processQueueTable.containsKey(mq)) {
                 // 如果经过消息队列重新负载(分配)后 ，分配到新的消息队列时 ，
                 // 首先需要尝试 向 Broker发起锁定该消 息队列的请求，如果返 回加锁成功则创建该消息 队列的拉取任务，
-                // 否 则将跳过 ，等待其他消 费者释放该消息 队列的锁 ，然后在下一次 队列重新负载时再尝试加 锁 。
+                // 否 则将跳过 ，等待其他消 费者释放该消息 队列的锁 ，然后在下一次队列重新负载时再尝试加 锁 。
                 // 其他队列会在rebalance中将未分配给自己的队列解锁，但是解锁如果失败，就需要等一个锁的超时时间了
                 if (isOrder && !this.lock(mq)) {
                     log.warn("doRebalance, {}, add a new mq failed, {}, because lock failed", consumerGroup, mq);

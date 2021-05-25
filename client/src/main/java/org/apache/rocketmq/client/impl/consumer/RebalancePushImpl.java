@@ -126,6 +126,7 @@ public class RebalancePushImpl extends RebalanceImpl {
                 }
             }, UNLOCK_DELAY_TIME_MILLS, TimeUnit.MILLISECONDS);
         } else {
+            // 以oneway方式进行解锁
             this.unlock(mq, true);
         }
         return true;
