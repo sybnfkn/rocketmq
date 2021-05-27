@@ -203,13 +203,12 @@ public abstract class RebalanceImpl {
                             if (!processQueue.isLocked()) {
                                 log.info("the message queue locked OK, Group: {} {}", this.consumerGroup, mq);
                             }
-
                             // 将成功锁定的消息消费队列相对应的处理队列设置为锁定状态，同时更新加锁 时间 。
                             processQueue.setLocked(true);
                             processQueue.setLastLockTimestamp(System.currentTimeMillis());
                         }
                     }
-                    for (MessageQueue mq : mqs) {
+                    for (MessageQueue mq : mqs/*本地对该broker拥有的queue*/) {
                         if (!lockOKMQSet.contains(mq)) {
                             ProcessQueue processQueue = this.processQueueTable.get(mq);
                             if (processQueue != null) {
