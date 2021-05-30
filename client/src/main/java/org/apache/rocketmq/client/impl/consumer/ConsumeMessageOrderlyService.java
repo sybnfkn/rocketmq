@@ -444,24 +444,26 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
              * 根据消息队列获取一个对象。 然后消息消费时先申请独占 objLock。
              * 顺序消息 消费的并发度为消息队列。 也就是一个消息消费队列同一时刻只会被一个消费线程池中一 个线程消费。
              */
+            /**
+             * 思考一 下，会不会出现当消息队列重新负载时，
+             * 原先由自己处理的消息队列被另外一个消费者分 配，
+             * 此时如果还未来得及将 ProceeQueue解除锁定，就被另外一个消费者添加进去，
+             * 此时 会存储多个消息消费者同时消费一个消息队列?答案是不会的，因为当一个新的消费队列 分配给消费者时，
+             * 在添加其拉取任务之前必须先向 Broker发送对该消息队列加锁请求，只 有加锁成功后，
+             * 才能添加拉取消息，否则智能等到下一次负载后，只有消费队列被原先占有的 消费者释放后，才能开始新的拉取任务 。
+             *
+             * 还有一种情况，那就是释放锁失败，这种情况，智能等待锁超时，被新分配队列的消费者才可以加锁成功，
+             */
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
             // 保证线性处理
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                         // 处理队列被锁，并且锁没有过期，保证多机之间因为rebalance原因不会重复消费，因为处于过度状态时，broker存放的锁信息是固定
-                        /**
-                         * 思考一 下，会不会出现当消息队列重新负载时，
-                         * 原先由自己处理的消息队列被另外一个消费者分 配，
-                         * 此时如果还未来得及将 ProceeQueue解除锁定，就被另外一个消费者添加进去，
-                         * 此时 会存储多个消息消费者同时消费一个消息队列?答案是不会的，因为当一个新的消费队列 分配给消费者时，
-                         * 在添加其拉取任务之前必须先向 Broker发送对该消息队列加锁请求，只 有加锁成功后，
-                         * 才能添加拉取消息，否则智能等到下一次负载后，只有消费队列被原先占有的 消费者释放后，才能开始新的拉取任务 。
-                         *
-                         * 还有一种情况，那就是释放锁失败，这种情况，智能等待锁超时，被新分配队列的消费者才可以加锁成功，
-                         */
+
                     || (this.processQueue.isLocked() && !this.processQueue.isLockExpired())) {
 
                     final long beginTime = System.currentTimeMillis();
+
                     for (boolean continueConsume = true; continueConsume; ) {
                         if (this.processQueue.isDropped()) {
                             log.warn("the message queue not be able to consume, because it's dropped. {}", this.messageQueue);
@@ -485,7 +487,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                         }
 
                         long interval = System.currentTimeMillis() - beginTime;
-                        // 消费持续的最大事件，超过事件就转交给其他线程处理
+                        // 消费持续的最大时间，超过时间就转交给其他线程处理
                         if (interval > MAX_TIME_CONSUME_CONTINUOUSLY) {
                             ConsumeMessageOrderlyService.this.submitConsumeRequestLater(processQueue, messageQueue, 10);
                             break;
@@ -595,6 +597,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                             // 处理消费结果
                             continueConsume = ConsumeMessageOrderlyService.this.processConsumeResult(msgs, status, context, this);
                         } else {
+                            // 本次消费结束
                             continueConsume = false;
                         }
                     }
