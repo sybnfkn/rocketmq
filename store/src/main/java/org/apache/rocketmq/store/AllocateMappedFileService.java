@@ -67,6 +67,7 @@ public class AllocateMappedFileService extends ServiceThread {
                 this.requestTable.remove(nextFilePath);
                 return null;
             }
+            //
             boolean offerOK = this.requestQueue.offer(nextReq);
             if (!offerOK) {
                 log.warn("never expected here, add a request to preallocate queue failed");
@@ -82,6 +83,7 @@ public class AllocateMappedFileService extends ServiceThread {
                     "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool().availableBufferNums());
                 this.requestTable.remove(nextNextFilePath);
             } else {
+                // 请求去生产mappedFile
                 boolean offerOK = this.requestQueue.offer(nextNextReq);
                 if (!offerOK) {
                     log.warn("never expected here, add a request to preallocate queue failed");
@@ -184,10 +186,12 @@ public class AllocateMappedFileService extends ServiceThread {
                 }
 
                 // pre write mappedFile
+                // 预写 mappedfile
                 if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
                     .getMappedFileSizeCommitLog()
                     &&
                     this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
+                    // 预热
                     mappedFile.warmMappedFile(this.messageStore.getMessageStoreConfig().getFlushDiskType(),
                         this.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile());
                 }

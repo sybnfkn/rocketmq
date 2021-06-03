@@ -562,6 +562,7 @@ public class MappedFile extends ReferenceResource {
         int flush = 0;
         long time = System.currentTimeMillis();
         for (int i = 0, j = 0; i < this.fileSize; i += MappedFile.OS_PAGE_SIZE, j++) {
+            // 为文件每页进行预热
             byteBuffer.put(i, (byte) 0);
             // force flush when flush disk type is sync
             if (type == FlushDiskType.SYNC_FLUSH) {
@@ -592,6 +593,7 @@ public class MappedFile extends ReferenceResource {
         log.info("mapped file warm-up done. mappedFile={}, costTime={}", this.getFileName(),
             System.currentTimeMillis() - beginTime);
 
+        // 进行缓存锁定，防止操作系统swap
         this.mlock();
     }
 
