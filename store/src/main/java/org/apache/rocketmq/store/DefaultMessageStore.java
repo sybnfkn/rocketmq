@@ -490,6 +490,7 @@ public class DefaultMessageStore implements MessageStore {
 
     @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
+        // 这里就会检查PAGE_CACHE 忙
         PutMessageStatus checkStoreStatus = this.checkStoreStatus();
         // 检查存储状态
         if (checkStoreStatus != PutMessageStatus.PUT_OK) {

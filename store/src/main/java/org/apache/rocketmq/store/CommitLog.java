@@ -884,6 +884,7 @@ public class CommitLog {
             /**
              * 只是将消息追加在内存中， 需要根 据是同步刷盘还是异步刷盘方式，将内存中的数据持久化到磁盘
              */
+            // 只是将消息追加在内存中
             result = mappedFile.appendMessage(msg, this.appendMessageCallback);
             switch (result.getStatus()) {
                 case PUT_OK:

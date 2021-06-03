@@ -365,6 +365,7 @@ public class MappedFile extends ReferenceResource {
 
         // All dirty data has been committed to FileChannel.
         if (writeBuffer != null && this.transientStorePool != null && this.fileSize == this.committedPosition.get()) {
+            // 写完将buffer还给pool
             this.transientStorePool.returnBuffer(writeBuffer);
             this.writeBuffer = null;
         }

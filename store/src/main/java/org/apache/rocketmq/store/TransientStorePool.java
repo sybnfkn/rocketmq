@@ -82,7 +82,9 @@ public class TransientStorePool {
     }
 
     public int availableBufferNums() {
+        // 如果是异步池化刷盘
         if (storeConfig.isTransientStorePoolEnable()) {
+            // 可用的bytebuffer数量
             return availableBuffers.size();
         }
         return Integer.MAX_VALUE;

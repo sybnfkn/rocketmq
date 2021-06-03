@@ -63,6 +63,7 @@ public class BrokerFastFailure {
     }
 
     private void cleanExpiredRequest() {
+        // 10s检查检查一次os 是否忙
         while (this.brokerController.getMessageStore().isOSPageCacheBusy()) {
             try {
                 if (!this.brokerController.getSendThreadPoolQueue().isEmpty()) {
@@ -70,22 +71,23 @@ public class BrokerFastFailure {
                     if (null == runnable) {
                         break;
                     }
-
                     final RequestTask rt = castRunnable(runnable);
-                    rt.returnResponse(RemotingSysResponseCode.SYSTEM_BUSY, String.format("[PCBUSY_CLEAN_QUEUE]broker busy, start flow control for a while, period in queue: %sms, size of queue: %d", System.currentTimeMillis() - rt.getCreateTimestamp(), this.brokerController.getSendThreadPoolQueue().size()));
+                    rt.returnResponse(RemotingSysResponseCode.SYSTEM_BUSY, String.format("[PCBUSY_CLEAN_QUEUE]broker busy, start flow control for a while, " +
+                            "period in queue: %sms, size of queue: %d",
+                            System.currentTimeMillis() - rt.getCreateTimestamp(), this.brokerController.getSendThreadPoolQueue().size()));
                 } else {
                     break;
                 }
             } catch (Throwable ignored) {
             }
         }
-
+        // 发送消息队列
         cleanExpiredRequestInQueue(this.brokerController.getSendThreadPoolQueue(),
             this.brokerController.getBrokerConfig().getWaitTimeMillsInSendQueue());
-
+        // 拉取队列
         cleanExpiredRequestInQueue(this.brokerController.getPullThreadPoolQueue(),
             this.brokerController.getBrokerConfig().getWaitTimeMillsInPullQueue());
-
+        // 心跳队列
         cleanExpiredRequestInQueue(this.brokerController.getHeartbeatThreadPoolQueue(),
             this.brokerController.getBrokerConfig().getWaitTimeMillsInHeartbeatQueue());
 
