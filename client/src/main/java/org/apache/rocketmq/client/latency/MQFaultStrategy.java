@@ -28,8 +28,10 @@ public class MQFaultStrategy {
 
     private boolean sendLatencyFaultEnable = false;
 
+    // 发送延时时间，如果报错默认延时时间=3000
     private long[] latencyMax = {50L, 100L, 550L, 1000L, 2000L, 3000L, 15000L};
 
+    // 发送延时说明网络情况不好，对应下次发送规避时间，发送延时时间<100，不好用时间为0
     private long[] notAvailableDuration = {0L, 0L, 30000L, 60000L, 120000L, 180000L, 600000L};
 
     public long[] getNotAvailableDuration() {
