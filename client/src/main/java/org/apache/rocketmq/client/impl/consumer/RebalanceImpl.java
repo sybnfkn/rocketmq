@@ -269,12 +269,9 @@ public abstract class RebalanceImpl {
                 break;
             }
             case CLUSTERING: {
-                // 从主题订阅缓存表中取出主题的队列信息
+                // ***** topicSubscribeInfoTable是从ns获取的，consumer线程定时拉取
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
-                // 发送请求从broker中获取所有消费者id，
-                // broker通过COnsumerManager维护所有消费者信息，此方法内部发送
-                // GET_CONSUMER_LIST_BY_GROUP给任意一个broker发送，进行获取
-                // 任意选一个broker发送即可，因为MQClientInstance会向所有broker发送心跳包，心跳包包含QMClientInstance消费者信息
+                // ***** cidAll从broker获取，主动发送GET_CONSUMER_LIST_BY_GROUP请求给任意一个broker获取
                 List<String> cidAll = this.mQClientFactory.findConsumerIdList(topic, consumerGroup);
                 if (null == mqSet) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -289,13 +286,11 @@ public abstract class RebalanceImpl {
                 if (mqSet != null && cidAll != null) {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
-                    // 进行排序，这个很重要，
                     // 让所有消费者看试图一致，确保同一个消费队列不会被多个消费者分配。
                     Collections.sort(mqAll);
                     Collections.sort(cidAll);
                     // 默认是平均分配策略
                     AllocateMessageQueueStrategy strategy = this.allocateMessageQueueStrategy;
-
                     List<MessageQueue> allocateResult = null;
                     try {
                         // 给本机分配的MessageQueue
@@ -315,16 +310,12 @@ public abstract class RebalanceImpl {
                         allocateResultSet.addAll(allocateResult);
                     }
 
-                    // 对比消息队列是否发生变化，主要思路是遍历当前负载队列集合，
-                    // 如果队列不在新分 配队列集合中，需要将该队列停止消费并保存消费进度;
-                    // 遍历已分配的队列，如果队列不 在队列负载表中( processQueueTable) 则需要创建该队列拉取任务 *****PullRequest*******，
-                    // 然后添加 到 PullMessageService线程的 pullRequestQueue 中， PulIMessageService才会继续拉取任务。
+                    // （1）如果队列不在新分配队列集合中，需要将该队列停止消费并保存消费进度;
+                    // 遍历已分配的队列，如果队列不在队列负载表中( processQueueTable) 则需要创建该队列拉取任务 PullRequest，
+                    // 然后添加到PullMessageService线程的 pullRequestQueue 中， PullMessageService才会继续拉取任务。
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, allocateResultSet, isOrder);
                     if (changed) {
-                        log.info(
-                            "rebalanced result changed. allocateMessageQueueStrategyName={}, group={}, topic={}, clientId={}, mqAllSize={}, cidAllSize={}, rebalanceResultSize={}, rebalanceResultSet={}",
-                            strategy.getName(), consumerGroup, topic, this.mQClientFactory.getClientId(), mqSet.size(), cidAll.size(),
-                            allocateResultSet.size(), allocateResultSet);
+                        log.info("rebalanced result changed. allocateMessageQueueStrategyName={}, group={}, topic={}, clientId={}, mqAllSize={}, cidAllSize={}, rebalanceResultSize={}, rebalanceResultSet={}", strategy.getName(), consumerGroup, topic, this.mQClientFactory.getClientId(), mqSet.size(), cidAll.size(), allocateResultSet.size(), allocateResultSet);
                         this.messageQueueChanged(topic, mqSet, allocateResultSet);
                     }
                 }
