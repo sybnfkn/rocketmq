@@ -416,7 +416,7 @@ public abstract class RebalanceImpl {
                 this.removeDirtyOffset(mq);
 
                 ProcessQueue pq = new ProcessQueue();
-                // 获取消费进度
+                // 计算 获取消费进度
                 long nextOffset = this.computePullFromWhere(mq);
                 if (nextOffset >= 0) {
                     ProcessQueue pre = this.processQueueTable.putIfAbsent(mq, pq);
