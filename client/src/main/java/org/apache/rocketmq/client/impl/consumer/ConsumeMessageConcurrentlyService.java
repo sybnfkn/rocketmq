@@ -313,11 +313,12 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 // 因为 ackIndex = -1 或者  consumeRequest.getMsgs().size() - 1;
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
-                    // 该批消息都 需要发 ACK 消息，如果消息发送 ACK 失败，则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，
-                    // 然后延迟 Ss 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
+                    // 该批消息都需要发ACK 消息，如果消息发送ACK失败，则直接将本批ACK消费发送失败的消息再次封装为ConsumeRequest，
+                    // 然后延迟5s后重新消费。如果ACK消息发送成功，则该消息会延迟消费 。
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);
+                        // 发送back消息失败，放入本地延时任务，延时消费
                         msgBackFailed.add(msg);
                     }
                 }
@@ -355,9 +356,11 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
     }
 
     public boolean sendMessageBack(final MessageExt msg, final ConsumeConcurrentlyContext context) {
+        // 计算延时级别
         int delayLevel = context.getDelayLevelWhenNextConsume();
 
         // Wrap topic with namespace before sending back message.
+        // 重试队列topic设置到此消息中
         msg.setTopic(this.defaultMQPushConsumer.withNamespace(msg.getTopic()));
         try {
             this.defaultMQPushConsumerImpl.sendMessageBack(msg, delayLevel, context.getMessageQueue().getBrokerName());
@@ -428,9 +431,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             MessageListenerConcurrently listener = ConsumeMessageConcurrentlyService.this.messageListener;
             ConsumeConcurrentlyContext context = new ConsumeConcurrentlyContext(messageQueue);
             ConsumeConcurrentlyStatus status = null;
-            // 恢复重试消息主题名 。这是 为什么呢?这是由消息重试机制决定的，
+            // 恢复重试消息主题名 。这是为什么呢?这是由消息重试机制决定的，
             // RocketMQ 将消息存入 commitlog文件时，如果发现消息的延时级别 delayTimeLevel大于 0，
-            // 会首先 将重试主题存人在消息的属性中，然后设置主题名称为 SCHEDULE_TOPIC，以便时间到 后重新参与消息消费 。
+            // 会首先 将对应重试的主题存入在消息的属性中，然后设置主题名称为 SCHEDULE_TOPIC，以便时间到后重新参与消息消费 。
             defaultMQPushConsumerImpl.resetRetryAndNamespace(msgs, defaultMQPushConsumer.getConsumerGroup());
 
             ConsumeMessageContext consumeMessageContext = null;

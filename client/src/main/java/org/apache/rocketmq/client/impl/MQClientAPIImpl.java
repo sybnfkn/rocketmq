@@ -1111,8 +1111,10 @@ public class MQClientAPIImpl {
 
         // group
         requestHeader.setGroup(consumerGroup);
+        // 真正的topic隐藏（其实并不是真正的topic）
         requestHeader.setOriginTopic(msg.getTopic());
         requestHeader.setOffset(msg.getCommitLogOffset());
+        // 延时任务形式发送broker
         requestHeader.setDelayLevel(delayLevel);
         requestHeader.setOriginMsgId(msg.getMsgId());
         requestHeader.setMaxReconsumeTimes(maxConsumeRetryTimes);

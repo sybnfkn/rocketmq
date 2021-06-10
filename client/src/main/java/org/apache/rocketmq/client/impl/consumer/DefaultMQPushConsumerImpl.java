@@ -104,6 +104,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private final RPCHook rpcHook;
     private volatile ServiceState serviceState = ServiceState.CREATE_JUST;
     private MQClientInstance mQClientFactory;
+    // 拉取消息线程
     private PullAPIWrapper pullAPIWrapper;
     private volatile boolean pause = false;
     private boolean consumeOrderly = false;
@@ -111,7 +112,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private MessageListener messageListenerInner;
     // 记录这个消费组所有对应队列的偏移量，特殊：一个group下可能会有多个topic，每个topic下的队列都会记录
     private OffsetStore offsetStore;
-    // 消息消费服务 消费COnsumeRequets
+    // 消息消费服务 消费ConsumeRequets
     private ConsumeMessageService consumeMessageService;
     private long queueFlowControlTimes = 0;
     private long queueMaxSpanFlowControlTimes = 0;
@@ -1216,10 +1217,16 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         return queueTimeSpan;
     }
 
+    /**
+     * 恢复重试消息主题名 。这是由消息重试机制决定的，
+     * @param msgs
+     * @param consumerGroup
+     */
     public void resetRetryAndNamespace(final List<MessageExt> msgs, String consumerGroup) {
+        // "%RETRY%" + 消费组名
         final String groupTopic = MixAll.getRetryTopic(consumerGroup);
         for (MessageExt msg : msgs) {
-            // 将重试相关消息 的真正topic重置
+            // 将重试相关消息的真正topic重置
             String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
             if (retryTopic != null && groupTopic.equals(msg.getTopic())) {
                 msg.setTopic(retryTopic);

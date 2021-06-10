@@ -142,9 +142,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return CompletableFuture.completedFuture(response);
         }
 
-        // 创建重试主题，重试主题名称 : %RETRY%+消费组名称，并从重试队列中随 机选 择一个 队列 ，并构建 TopicConfig 主题配置信息 。
+        // 创建重试主题，重试主题名称 : %RETRY%+消费组名称，并从重试队列中随机选择一个 队列 ，并构建TopicConfig主题配置信息 。
         String newTopic = MixAll.getRetryTopic(requestHeader.getGroup());
         int queueIdInt = Math.abs(this.random.nextInt() % 99999999) % subscriptionGroupConfig.getRetryQueueNums();
+
         int topicSysFlag = 0;
         if (requestHeader.isUnitMode()) {
             topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
@@ -165,7 +166,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             response.setRemark(String.format("the topic[%s] sending message is forbidden", newTopic));
             return CompletableFuture.completedFuture(response);
         }
-        // 创建重试主题，重试主题名称 : %RETRY%+消费组名称，并从重试队列中随 机选 择一个 队列 ，并构建 TopicConfig 主题配置信息 。
+        // 从commitLog取出原消息
         MessageExt msgExt = this.brokerController.getMessageStore().lookMessageByOffset(requestHeader.getOffset());
         if (null == msgExt) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -188,7 +189,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             maxReconsumeTimes = requestHeader.getMaxReconsumeTimes();
         }
 
-        // 大于重试次数
+        // 大于重试次数 进入死信队列
         if (msgExt.getReconsumeTimes() >= maxReconsumeTimes 
             || delayLevel < 0) {
             // 再次改变 newTopic 主题为 DLQ (”%DLQ%”)，该主题的权限为只写，
@@ -212,10 +213,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         // 根据原先消息创建一个新的消息对象，
-        // 重试消息拥有自 己的唯一消息 ID ( msgld)并存人到 commitlog文件中，并不会去更新原先消息，
-        // 而是会将原先的主题、 消息 ID存入消息的属性中， 主题名称为重试主题， 其他属性与原先消息保持相同。
+        // 重试消息拥有自己的唯一消息 ID ( msgld)并存人到 commitlog文件中，并不会去更新原先消息，
+        // 而是会将原先的主题、消息 ID存入消息的属性中，主题名称为重试主题， 其他属性与原先消息保持相同。
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(newTopic); // 新的topic
+        msgInner.setTopic(newTopic); // 新的topic 可能是 %DLQ%或者 %RETRY%+消费组
         msgInner.setBody(msgExt.getBody());
         msgInner.setFlag(msgExt.getFlag());
         MessageAccessor.setProperties(msgInner, msgExt.getProperties());
