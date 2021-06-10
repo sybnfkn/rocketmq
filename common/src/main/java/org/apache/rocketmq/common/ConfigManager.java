@@ -68,6 +68,7 @@ public abstract class ConfigManager {
     public abstract void decode(final String jsonString);
 
     public synchronized void persist() {
+        // json字符串
         String jsonString = this.encode(true);
         if (jsonString != null) {
             String fileName = this.configFilePath();

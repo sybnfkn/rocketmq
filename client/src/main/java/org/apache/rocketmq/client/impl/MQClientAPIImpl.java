@@ -1109,6 +1109,7 @@ public class MQClientAPIImpl {
         ConsumerSendMsgBackRequestHeader requestHeader = new ConsumerSendMsgBackRequestHeader();
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUMER_SEND_MSG_BACK, requestHeader);
 
+        // group
         requestHeader.setGroup(consumerGroup);
         requestHeader.setOriginTopic(msg.getTopic());
         requestHeader.setOffset(msg.getCommitLogOffset());
