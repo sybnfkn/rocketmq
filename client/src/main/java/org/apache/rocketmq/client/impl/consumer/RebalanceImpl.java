@@ -226,6 +226,10 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     * 遍历当前消费者的每个topic进行rebalance
+     * @param isOrder
+     */
     public void doRebalance(final boolean isOrder) {
         // 调用DefaultMQPushConserImpl的subscribe进行填充
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
@@ -233,6 +237,7 @@ public abstract class RebalanceImpl {
             for (final Map.Entry<String, SubscriptionData> entry : subTable.entrySet()) {
                 final String topic = entry.getKey();
                 try {
+                    // 按照topic进行rebalance
                     this.rebalanceByTopic(topic, isOrder);
                 } catch (Throwable e) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -241,7 +246,6 @@ public abstract class RebalanceImpl {
                 }
             }
         }
-
         this.truncateMessageQueueNotMyTopic();
     }
 

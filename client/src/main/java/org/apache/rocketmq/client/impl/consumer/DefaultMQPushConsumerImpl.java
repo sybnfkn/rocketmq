@@ -876,8 +876,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    // consumer#start启动时候会调用
     private void copySubscription() throws MQClientException {
         try {
+            // 1.构建正常的订阅信息放入rebalance中
             Map<String, String> sub = this.defaultMQPushConsumer.getSubscription();
             if (sub != null) {
                 for (final Map.Entry<String, String> entry : sub.entrySet()) {
@@ -893,11 +895,12 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 this.messageListenerInner = this.defaultMQPushConsumer.getMessageListener();
             }
 
+            // 2.构建RETRY重试队列的订阅信息放入rebalance，如果是集群模式的话
             switch (this.defaultMQPushConsumer.getMessageModel()) {
                 case BROADCASTING:
                     break;
                 case CLUSTERING:
-                    // %RETRY% + 消费组名
+                    // %RETRY% + 消费组名  注意：和group有关
                     final String retryTopic = MixAll.getRetryTopic(this.defaultMQPushConsumer.getConsumerGroup());
                     SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),
                         retryTopic, SubscriptionData.SUB_ALL);
