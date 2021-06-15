@@ -571,7 +571,6 @@ public class MappedFile extends ReferenceResource {
                     mappedByteBuffer.force();
                 }
             }
-
             // prevent gc
             if (j % 1000 == 0) {
                 log.info("j={}, costTime={}", j, System.currentTimeMillis() - time);
@@ -583,7 +582,6 @@ public class MappedFile extends ReferenceResource {
                 }
             }
         }
-
         // force flush when prepare load finished
         if (type == FlushDiskType.SYNC_FLUSH) {
             log.info("mapped file warm-up done, force to disk, mappedFile={}, costTime={}",
@@ -592,7 +590,6 @@ public class MappedFile extends ReferenceResource {
         }
         log.info("mapped file warm-up done. mappedFile={}, costTime={}", this.getFileName(),
             System.currentTimeMillis() - beginTime);
-
         // 进行缓存锁定，防止操作系统swap
         this.mlock();
     }
