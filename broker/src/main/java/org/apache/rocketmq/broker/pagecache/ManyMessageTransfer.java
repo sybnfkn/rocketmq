@@ -64,15 +64,16 @@ public class ManyMessageTransfer extends AbstractReferenceCounted implements Fil
             transferred += target.write(this.byteBufferHeader);
             return transferred;
         } else {
+            // 这里是 MappedByteBuffer List，就是从fileChannel.map得到的
             List<ByteBuffer> messageBufferList = this.getMessageResult.getMessageBufferList();
             for (ByteBuffer bb : messageBufferList) {
                 if (bb.hasRemaining()) {
+                    // 将MappedByteBuffer通过内存映射的方式写到socketBuffer
                     transferred += target.write(bb);
                     return transferred;
                 }
             }
         }
-
         return 0;
     }
 

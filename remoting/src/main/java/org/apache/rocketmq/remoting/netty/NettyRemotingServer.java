@@ -221,6 +221,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 });
 
         if (nettyServerConfig.isServerPooledByteBufAllocatorEnable()) {
+            // 池化的直接内存
             childHandler.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         }
 

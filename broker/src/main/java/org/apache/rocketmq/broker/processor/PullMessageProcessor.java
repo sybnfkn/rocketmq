@@ -395,7 +395,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                             (int) (this.brokerController.getMessageStore().now() - beginTimeMills));
                         response.setBody(r);
                     } else {
-                        // 用
+                        // 用 mmap 方式发送
                         try {
                             FileRegion fileRegion =
                                 new ManyMessageTransfer(response.encodeHeader(getMessageResult.getBufferTotalSize()), getMessageResult);

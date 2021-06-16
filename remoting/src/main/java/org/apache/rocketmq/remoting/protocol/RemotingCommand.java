@@ -157,8 +157,8 @@ public class RemotingCommand {
             bodyData = new byte[bodyLength];
             byteBuffer.get(bodyData);
         }
+        // 业务数据
         cmd.body = bodyData;
-
         return cmd;
     }
 

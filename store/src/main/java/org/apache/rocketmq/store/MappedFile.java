@@ -238,6 +238,7 @@ public class MappedFile extends ReferenceResource {
         if (currentPos < this.fileSize) {
             // mappedByteBuffer基于mmap的直接内存
             // writeBuffer临时的直接内存
+            // ****************** 具体根据配置决定使用哪种buffer
             ByteBuffer byteBuffer = writeBuffer != null ? writeBuffer.slice() : this.mappedByteBuffer.slice();
             // 设置position为当前指针
             byteBuffer.position(currentPos);
