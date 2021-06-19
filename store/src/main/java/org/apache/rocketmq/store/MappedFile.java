@@ -319,14 +319,17 @@ public class MappedFile extends ReferenceResource {
     public int flush(final int flushLeastPages) {
         if (this.isAbleToFlush(flushLeastPages)) {
             if (this.hold()) {
+                // this.writeBuffer == null ? this.wrotePosition.get() : this.committedPosition.get()
                 int value = getReadPosition();
 
                 try {
                     // 如果开启transnientStorePoolEnable用channel.force()刷新，反之用MappedByteBuffer.force()
                     //We only append data to fileChannel or mappedByteBuffer, never both.
                     if (writeBuffer != null || this.fileChannel.position() != 0) {
+                        // 池化刷盘
                         this.fileChannel.force(false);
                     } else {
+                        // 非池化刷盘
                         this.mappedByteBuffer.force();
                     }
                 } catch (Throwable e) {

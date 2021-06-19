@@ -82,7 +82,7 @@ public class CommitLog {
             // 异步刷盘
             this.flushCommitLogService = new FlushRealTimeService();
         }
-
+        // 提交池化BYteBuffer到fileChannel中
         this.commitLogService = new CommitRealTimeService();
 
         this.appendMessageCallback = new DefaultAppendMessageCallback(defaultMessageStore.getMessageStoreConfig().getMaxMessageSize());
@@ -950,6 +950,7 @@ public class CommitLog {
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
             if (messageExt.isWaitStoreMsgOK()) {
+                // WroteOffset写入偏移量 + WroteBytes写入大小 = 这个位置被刷入，说明整个消息已经ok
                 GroupCommitRequest request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes(),
                         this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                 service.putRequest(request);
@@ -962,8 +963,10 @@ public class CommitLog {
         // Asynchronous flush
         else {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
+                // 先写到堆外内存，然后写到pageCache
                 flushCommitLogService.wakeup();
             } else  {
+                // 直接写到pagecache
                 commitLogService.wakeup();
             }
             return CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);
@@ -1386,6 +1389,7 @@ public class CommitLog {
                     }
 
                     long begin = System.currentTimeMillis();
+                    //
                     CommitLog.this.mappedFileQueue.flush(flushPhysicQueueLeastPages);
                     long storeTimestamp = CommitLog.this.mappedFileQueue.getStoreTimestamp();
                     if (storeTimestamp > 0) {
