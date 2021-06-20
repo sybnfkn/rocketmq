@@ -723,9 +723,14 @@ public class DefaultMessageStore implements MessageStore {
 
                         nextBeginOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
 
+                        // maxOffsetPy：commotlog当前最大物理位置
+                        // maxPhyOffsetPulling：消费者当前拉取的物理位置
+                        // diff：消费者将要拉取的范围
                         long diff = maxOffsetPy - maxPhyOffsetPulling;
+                        // 40%的内存大小
                         long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE
                             * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
+                        // ******** 建议consumer从从库拉取消息
                         getResult.setSuggestPullingFromSlave(diff > memory);
                     } finally {
 
