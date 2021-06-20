@@ -213,7 +213,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                             .addLast(defaultEventExecutorGroup,
                                 encoder,
                                 new NettyDecoder(),
+                                // 通道空闲检测
                                 new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
+                                // 连接管理，将连接放入/删除 业务集合
                                 connectionManageHandler,
                                 serverHandler
                             );
