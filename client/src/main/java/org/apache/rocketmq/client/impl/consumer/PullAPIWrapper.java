@@ -71,7 +71,9 @@ public class PullAPIWrapper {
         final SubscriptionData subscriptionData) {
         PullResultExt pullResultExt = (PullResultExt) pullResult;
 
+        // 如果broker告诉consumer，让他从salve拉取，就在这里修改brokerId为salve
         this.updatePullFromWhichNode(mq, pullResultExt.getSuggestWhichBrokerId());
+
         if (PullStatus.FOUND == pullResult.getPullStatus()) {
             ByteBuffer byteBuffer = ByteBuffer.wrap(pullResultExt.getMessageBinary());
             List<MessageExt> msgList = MessageDecoder.decodes(byteBuffer);
@@ -122,6 +124,7 @@ public class PullAPIWrapper {
         if (null == suggest) {
             this.pullFromWhichNodeTable.put(mq, new AtomicLong(brokerId));
         } else {
+            // 修改下次拉取的brokerId
             suggest.set(brokerId);
         }
     }
