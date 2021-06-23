@@ -245,13 +245,14 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         long cachedMessageCount = processQueue.getMsgCount().get();
         // 最大偏移量和最小偏移量的间距
         long cachedMessageSizeInMiB = processQueue.getMsgSize().get() / (1024 * 1024);
-
         /**
          * 进行消息拉取流控 。 从消息消费数量与消费间隔两个维度进行控制 。
          */
-        // 消息处理总数，如果 ProcessQueue 当前处理的消息条数超过了 pullThresholdFor­ Queue=lOOO将触发流控，放弃本次拉取任务，并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
-        // pullRequest = {拉取任务} , flowControlTimes = {流控触发次数} 。
+        // 消息处理总数，如果ProcessQueue当前处理的消息条数超过了1000将触发流控，放弃本次拉取任务，
+        // 并且该队列的下一次拉取任务将在 50毫秒后 才加入到拉取任务队列中，
+        // 1000倍数时候打印警告日志
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
+            // 50毫秒后重新放入任务队列
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
                 log.warn(
@@ -261,10 +262,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             return;
         }
 
-        // ProcessQueue 中队列最大偏移量与最小偏离量的间距， 不能超过 consumeConcurrently­ MaxSpan，否则触发流控，
-        // 每触发 1000 次输出提示语: the queue's messages, span too long, so do flow control, minOffset={队列最小偏移量}，
-        // maxOffset={队列最大偏移量}， maxSpan={间隔}， pullRequest={拉取任务信息}，flowControlTimes={流控触发次数}。
-        // 这里主要的考量是担心一 条消息堵塞，消息进度无法向前推进，可能造成大量消息重复消费 。
+        // ProcessQueue中队列最大偏移量与最小偏离量的间距，不能超过100，否则触发流控，
+        // 目的：担心一条消息堵塞，消息进度无法向前推进，可能造成大量消息重复消费 。
         if (cachedMessageSizeInMiB > this.defaultMQPushConsumer.getPullThresholdSizeForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
@@ -352,7 +351,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                                 DefaultMQPushConsumerImpl.this.getConsumerStatsManager().incPullTPS(pullRequest.getConsumerGroup(),
                                     pullRequest.getMessageQueue().getTopic(), pullResult.getMsgFoundList().size());
-                                // 将消息放入ProcessQueue
+                                // 将消息放入ProcessQueue 放入红黑树
                                 boolean dispatchToConsume = processQueue.putMessage(pullResult.getMsgFoundList());
                                 // 提交消费请求，这是一个异步消息
                                 DefaultMQPushConsumerImpl.this.consumeMessageService.submitConsumeRequest(

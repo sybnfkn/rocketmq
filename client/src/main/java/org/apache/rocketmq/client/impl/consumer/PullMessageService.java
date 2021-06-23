@@ -94,7 +94,8 @@ public class PullMessageService extends ServiceThread {
         // PullMessageService 只有 在拿到PullRequest对象时才会执行拉取任务
         while (!this.isStopped()) {
             try {
-                // 从pullRequestQueue中获取一个PullRequest消息拉取任务，如果pullRequestQueue 为空，则线程将阻塞，直到有拉取任务被放入 。
+                // 从pullRequestQueue中获取一个PullRequest消息拉取任务，
+                // 如果pullRequestQueue 为空，则线程将阻塞，直到有拉取任务被放入 。
                 PullRequest pullRequest = this.pullRequestQueue.take();
                 // 调用 pullMessage 方 法进行消息拉取 。
                 this.pullMessage(pullRequest);
