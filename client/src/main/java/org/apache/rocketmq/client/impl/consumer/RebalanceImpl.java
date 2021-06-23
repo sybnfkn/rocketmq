@@ -366,7 +366,7 @@ public abstract class RebalanceImpl {
             ProcessQueue pq = next.getValue();
 
             /**
-             * 1。先修复以前旧的队列信息
+             * 1.处理以前旧的队列信息
              */
             if (mq.getTopic().equals(topic)) { // 只处理topic匹配的
                 // 如果缓存表中MessageQueue不包含在mqSet中
@@ -376,8 +376,8 @@ public abstract class RebalanceImpl {
                     // 设置不被消费
                     pq.setDropped(true);
                     // 是否将MessageQueue，ProcessQueue从缓存表中移除
-                    // 主要持久化待移除MessageQueue消息消费进度。
-                    // 在这里会进行解锁
+                    // 1.主要持久化待移除MessageQueue消息消费进度。
+                    // 2.顺序消息在这里会进行解锁
                     if (this.removeUnnecessaryMessageQueue(mq, pq)) {
                         it.remove();
                         changed = true;
@@ -403,7 +403,9 @@ public abstract class RebalanceImpl {
             }
         }
 
-        // 在对新的队列进行处理
+        /**
+         * 2。对新分配的队列处理
+         */
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             // 如果不包含，说明本次新增加的消息队列，从内存中移除该消息队列饿的消费进度
