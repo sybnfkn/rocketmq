@@ -191,9 +191,11 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
+            // 根据absorb文件判断是否正常退出
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
+            // 定时消息队列恢复
             if (null != scheduleMessageService) {
                 result = result && this.scheduleMessageService.load();
             }

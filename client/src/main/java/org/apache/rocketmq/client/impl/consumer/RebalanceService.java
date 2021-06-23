@@ -37,7 +37,7 @@ public class RebalanceService extends ServiceThread {
         log.info(this.getServiceName() + " service started");
 
         while (!this.isStopped()) {
-            // 阻塞在这里，但是会被服务端通知唤醒
+            // 阻塞在这里 1.要么被服务端通知唤醒  2.要么20s时间到
             this.waitForRunning(waitInterval);
             this.mqClientFactory.doRebalance();
         }

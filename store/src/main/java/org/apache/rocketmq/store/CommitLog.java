@@ -434,6 +434,7 @@ public class CommitLog {
             // Looking beginning to recover from which file
             int index = mappedFiles.size() - 1;
             MappedFile mappedFile = null;
+            // 从倒数第一个文件开始检查
             for (; index >= 0; index--) {
                 mappedFile = mappedFiles.get(index);
                 if (this.isMappedFileMatchedRecover(mappedFile)) {
@@ -511,6 +512,14 @@ public class CommitLog {
         }
     }
 
+    /**
+     * 对比文件 第一条 消息的时间戳与检测点，文件第 一条 消息的时间戳小于文 件检测点说明该文件部分消息是可靠的，
+     * 则从该文件开始恢复。 文件检测点中保存了 Commitlog文件、消息消费队列(ConsumeQueue)、索引文件 (IndexFile)的文件刷盘点，
+     * RocketMQ 默认选择这消息文件与消息消费队列这两个文件的时间刷盘点中最小值与消息文 件第一消息的时间戳对比，如果 messagelndexEnable为 true，
+     * 表示索引文件的刷盘时间点也参与计算
+     * @param mappedFile
+     * @return
+     */
     private boolean isMappedFileMatchedRecover(final MappedFile mappedFile) {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
@@ -523,12 +532,14 @@ public class CommitLog {
         int bornhostLength = (sysFlag & MessageSysFlag.BORNHOST_V6_FLAG) == 0 ? 8 : 20;
         int msgStoreTimePos = 4 + 4 + 4 + 4 + 4 + 8 + 8 + 4 + 8 + bornhostLength;
         long storeTimestamp = byteBuffer.getLong(msgStoreTimePos);
+        // 文件开头的第一个消息的时间
         if (0 == storeTimestamp) {
             return false;
         }
 
         if (this.defaultMessageStore.getMessageStoreConfig().isMessageIndexEnable()
             && this.defaultMessageStore.getMessageStoreConfig().isMessageIndexSafe()) {
+            // 文件第一条消息的时间戳小于文件检测点说明该文件部分消息是可靠的
             if (storeTimestamp <= this.defaultMessageStore.getStoreCheckpoint().getMinTimestampIndex()) {
                 log.info("find check timestamp, {} {}",
                     storeTimestamp,

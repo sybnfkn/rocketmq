@@ -453,6 +453,7 @@ public class MappedFileQueue {
             long where = mappedFile.getFileFromOffset() + offset;
             result = where == this.flushedWhere;
             this.flushedWhere = where;
+            // 记录刷盘时间点
             if (0 == flushLeastPages) {
                 this.storeTimestamp = tmpTimeStamp;
             }
