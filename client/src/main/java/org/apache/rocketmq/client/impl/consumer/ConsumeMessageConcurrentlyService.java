@@ -310,10 +310,11 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
             case CLUSTERING:
                 List<MessageExt> msgBackFailed = new ArrayList<MessageExt>(consumeRequest.getMsgs().size());
-                // 因为 ackIndex = -1 或者  consumeRequest.getMsgs().size() - 1;
+                // 因为ackIndex=-1或者consumeRequest.getMsgs().size() - 1;
+                // 一但一个消息失败，所有都要重试
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
-                    // 该批消息都需要发ACK 消息，如果消息发送ACK失败，则直接将本批ACK消费发送失败的消息再次封装为ConsumeRequest，
+                    // 该批消息都需要发ACK消息，如果消息发送ACK失败，则直接将本批ACK消费发送失败的消息再次封装为ConsumeRequest，
                     // 然后延迟5s后重新消费。如果ACK消息发送成功，则该消息会延迟消费 。
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {
@@ -322,15 +323,13 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                         msgBackFailed.add(msg);
                     }
                 }
-
                 // 发送ACK失败
                 if (!msgBackFailed.isEmpty()) {
-
                     // 如果发送back失败，这里将这些消息重新消费，此次操作不会移动他们的偏移量
                     consumeRequest.getMsgs().removeAll(msgBackFailed);
-
-                    // 该批消息都 需要发 ACK 消息，如果消息发送 ACK 失败，
-                    // 则直接将本批 ACK 消费发送失败的消息再 次封装为 ConsumeRequest，然后延迟 5s 后 重新消费 。 如果 ACK 消息发送成功，则 该消息 会延迟消费 。
+                    // 该批消息都需要发ACK消息，如果消息发送ACK失败，
+                    // 则直接将本批ACK消费发送失败的消息再 次封装为 ConsumeRequest，然后延迟5s后重新消费 。
+                    // 如果ACK消息发送成功，则该消息会延迟消费 。
                     this.submitConsumeRequestLater(msgBackFailed, consumeRequest.getProcessQueue(), consumeRequest.getMessageQueue());
                 }
                 break;
