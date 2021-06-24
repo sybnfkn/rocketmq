@@ -383,15 +383,17 @@ public class MappedFile extends ReferenceResource {
      * slice() 方法创建 一 个共享缓存区 ， 与原先的 ByteBuffer 共享内存 但维护一套独立的指针 (position、 mark、 limit)。
      */
     protected void commit0(final int commitLeastPages) {
+        // 写入的偏移量
         int writePos = this.wrotePosition.get();
+        // 提交的偏移量
         int lastCommittedPosition = this.committedPosition.get();
-        // 有新提交的数据
+        // 有需要提交的数据
         if (writePos - this.committedPosition.get() > 0) {
             try {
                 ByteBuffer byteBuffer = writeBuffer.slice();
-                // 从这个位置
+                // 从上次提交的位置开始
                 byteBuffer.position(lastCommittedPosition);
-                // 提交到这个位置
+                // 提交到写入的这个偏移量
                 byteBuffer.limit(writePos);
                 this.fileChannel.position(lastCommittedPosition);
                 this.fileChannel.write(byteBuffer);
@@ -435,6 +437,7 @@ public class MappedFile extends ReferenceResource {
 
         if (commitLeastPages > 0) {
             // 当前脏页是否大于等于最小提交的页数
+            // 等待提交的页数 》4页才会提交
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= commitLeastPages;
         }
 
