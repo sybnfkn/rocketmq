@@ -81,7 +81,7 @@ public class BrokerFastFailure {
             } catch (Throwable ignored) {
             }
         }
-        // 发送消息队列
+        // 发送消息队列 ----- 200ms未被处理，快速失败
         cleanExpiredRequestInQueue(this.brokerController.getSendThreadPoolQueue(),
             this.brokerController.getBrokerConfig().getWaitTimeMillsInSendQueue());
         // 拉取队列

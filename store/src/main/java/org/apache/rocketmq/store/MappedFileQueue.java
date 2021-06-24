@@ -464,11 +464,15 @@ public class MappedFileQueue {
 
     public boolean commit(final int commitLeastPages) {
         boolean result = true;
+        // 根据committedWhere找到当前写的mappeFile
         MappedFile mappedFile = this.findMappedFileByOffset(this.committedWhere, this.committedWhere == 0);
         if (mappedFile != null) {
+            // 写过的offset
             int offset = mappedFile.commit(commitLeastPages);
+            // 写完之后的位置
             long where = mappedFile.getFileFromOffset() + offset;
             result = where == this.committedWhere;
+            //
             this.committedWhere = where;
         }
 

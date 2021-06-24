@@ -51,11 +51,9 @@ public class MappedFile extends ReferenceResource {
 
     // JVM中MappedFile对象个数
     private static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
-    // 当前该文件的写指针，从 0开始(内存映射文件中的
-    //写指针)。
+    // 当前该文件的写指针，从0开始(内存映射文件中的写指针)。
     protected final AtomicInteger wrotePosition = new AtomicInteger(0);
-    // 当前文件的提交指针，如果开启 transientStore­PoolEnable，
-    //则数据会存储在 TransientStorePool 中， 然后提交到内存映射 ByteBuffer 中，
+    // 当前文件的提交指针，如果开启 transientStorePoolEnable，则数据会存储在 TransientStorePool 中， 然后提交到内存映射ByteBuffer中，
     // 再 刷写到磁盘。
     protected final AtomicInteger committedPosition = new AtomicInteger(0);
     // 刷写到磁盘指针，该指针之前的数据持久化到磁盘中
@@ -387,13 +385,13 @@ public class MappedFile extends ReferenceResource {
     protected void commit0(final int commitLeastPages) {
         int writePos = this.wrotePosition.get();
         int lastCommittedPosition = this.committedPosition.get();
-
+        // 有新提交的数据
         if (writePos - this.committedPosition.get() > 0) {
             try {
                 ByteBuffer byteBuffer = writeBuffer.slice();
                 // 从这个位置
                 byteBuffer.position(lastCommittedPosition);
-                // 写到这个位置
+                // 提交到这个位置
                 byteBuffer.limit(writePos);
                 this.fileChannel.position(lastCommittedPosition);
                 this.fileChannel.write(byteBuffer);
