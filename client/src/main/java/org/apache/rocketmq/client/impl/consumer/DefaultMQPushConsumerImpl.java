@@ -475,7 +475,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 pullRequest.getNextOffset(), // 消息拉取偏移量
                 this.defaultMQPushConsumer.getPullBatchSize(), // 本次消息拉取最大消息条数，默认32
                 sysFlag, // 拉取系统标记
-                commitOffsetValue, // 当前 MessageQueue 的消费进度(内存中) 。
+                commitOffsetValue, // 当前 MessageQueue 的消费进度(内存中) 。  ********* 每次拉取时候会带着
                 BROKER_SUSPEND_MAX_TIME_MILLIS, // 消息拉取过程中允许 Broker挂起时间，默认15s。
                 CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND, // 消息拉取超时时间 。
                 CommunicationMode.ASYNC, // 消息拉取模式，默认为异步拉取
