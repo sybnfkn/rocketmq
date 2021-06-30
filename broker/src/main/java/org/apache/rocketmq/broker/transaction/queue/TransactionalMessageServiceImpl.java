@@ -140,7 +140,9 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                 // 获取已处理消息的消息消费队列，其主题为 : RMQ SYS_TRANS_OP_HALF_TOPIC。
                 MessageQueue opQueue = getOpQueue(messageQueue);
                 // 获取两个队列的偏移量
+                // 半消息偏移量
                 long halfOffset = transactionalMessageBridge.fetchConsumeOffset(messageQueue);
+                // 完成队列的偏移量
                 long opOffset = transactionalMessageBridge.fetchConsumeOffset(opQueue);
 
                 log.info("Before check, the queue={} msgOffset={} opOffset={}", messageQueue, halfOffset, opOffset);
@@ -250,8 +252,10 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                             }
                         }
                         List<MessageExt> opMsg = pullResult.getMsgFoundList();
+                        // 1.opMsg为空，并且长时间未commit/rollback
+                        // 2.opmsg不为空，最后一条消息时间 - 当前消息时间 > transactionTimeout
                         boolean isNeedCheck = (opMsg == null && valueOfCurrentMinusBorn > checkImmunityTime)
-                            || (opMsg != null && (opMsg.get(opMsg.size() - 1).getBornTimestamp() - startTime > transactionTimeout))
+                            || (opMsg != null && (opMsg.get(opMsg.size() - 1).getBornTimestamp() - startTime > transactionTimeout)) //
                             || (valueOfCurrentMinusBorn <= -1);
 
                         // 10。判断是否需要发送事务回查消息，具体逻辑如下 。
@@ -348,8 +352,8 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                     // 已经处理完成的（有些消息可能已经处理完成了，但是受限于前面没有处理完成，偏移量还是以前的旧的）
                     doneOpOffset.add(opMessageExt.getQueueOffset());
                 } else {
-                    // key：prepare消息的偏移量
-                    // value：op_half消息的偏移量
+                    // key：half消息的offset
+                    // value：op_half消息的offset
                     removeMap.put(queueOffset, opMessageExt.getQueueOffset());
                 }
             } else {
