@@ -293,6 +293,7 @@ public class MQClientInstance {
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
 
+        // 1s发一次心跳
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
