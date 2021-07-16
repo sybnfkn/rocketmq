@@ -71,6 +71,7 @@ public class TopicConfigManager extends ConfigManager {
         }
         {
             // MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC
+            // 项目启动，如果broker设置autocreateTopic，创建对应的topicconfig，然后发送给nameserver，并且持久化
             if (this.brokerController.getBrokerConfig().isAutoCreateTopicEnable()) {
                 String topic = MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC;
                 TopicConfig topicConfig = new TopicConfig(topic);
@@ -164,7 +165,6 @@ public class TopicConfigManager extends ConfigManager {
         final String remoteAddress, final int clientDefaultTopicQueueNums, final int topicSysFlag) {
         TopicConfig topicConfig = null;
         boolean createNew = false;
-
         try {
             if (this.lockTopicConfigTable.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
@@ -362,15 +362,15 @@ public class TopicConfigManager extends ConfigManager {
     }
 
     public void updateTopicConfig(final TopicConfig topicConfig) {
+        // 放入内存，定时会将发送到nameserver
         TopicConfig old = this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         if (old != null) {
             log.info("update topic config, old:[{}] new:[{}]", old, topicConfig);
         } else {
             log.info("create new topic [{}]", topicConfig);
         }
-
         this.dataVersion.nextVersion();
-
+        // topicConfigTable会被持久化到 rocketmq/store/config/topics.json 中
         this.persist();
     }
 
