@@ -240,6 +240,7 @@ public class TopicConfigManager extends ConfigManager {
         final int perm,
         final int topicSysFlag) {
         TopicConfig topicConfig = this.topicConfigTable.get(topic);
+        // 存在直接返回
         if (topicConfig != null)
             return topicConfig;
 
